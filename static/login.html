@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>登录 · OpenClaw 配置面板</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #08111f;
+      --card: rgba(15, 23, 42, 0.9);
+      --border: rgba(148, 163, 184, 0.18);
+      --text: #e5eefb;
+      --muted: #95a8c6;
+      --danger: #f87171;
+      --ok: #86efac;
+      --shadow: 0 24px 64px rgba(2, 6, 23, 0.42);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(59, 130, 246, 0.22), transparent 34%),
+        radial-gradient(circle at top right, rgba(52, 211, 153, 0.16), transparent 28%),
+        var(--bg);
+      color: var(--text);
+    }
+    .panel {
+      width: min(420px, 100%);
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(17, 24, 39, 0.94));
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      padding: 28px;
+      backdrop-filter: blur(12px);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 26px;
+      font-weight: 700;
+    }
+    .sub {
+      margin: 0 0 22px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    label {
+      font-size: 13px;
+      color: var(--muted);
+    }
+    input {
+      width: 100%;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background: rgba(2, 6, 23, 0.54);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 13px 14px;
+      font: inherit;
+    }
+    input:focus {
+      outline: none;
+      border-color: rgba(96, 165, 250, 0.92);
+      box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+    }
+    .captcha-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 132px 72px;
+      gap: 10px;
+      align-items: end;
+    }
+    .captcha-box {
+      width: 132px;
+      height: 44px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: rgba(2, 6, 23, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .captcha-box svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    button {
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 16px;
+      font: inherit;
+      cursor: pointer;
+      transition: transform .12s ease, opacity .12s ease;
+    }
+    button:hover { transform: translateY(-1px); }
+    button:disabled { opacity: .6; cursor: wait; transform: none; }
+    .primary {
+      width: 100%;
+      margin-top: 6px;
+      background: linear-gradient(90deg, #2563eb, #38bdf8);
+      color: white;
+      font-weight: 600;
+    }
+    .secondary {
+      background: rgba(148, 163, 184, 0.14);
+      color: var(--text);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+    }
+    .status {
+      min-height: 20px;
+      margin-top: 14px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .status.error { color: var(--danger); }
+    .status.ok { color: var(--ok); }
+    .hidden { display: none !important; }
+    @media (max-width: 520px) {
+      .panel { padding: 22px; }
+      .captcha-row {
+        grid-template-columns: 1fr;
+      }
+      .captcha-box,
+      .secondary {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <h1 id="pageTitle">登录</h1>
+    <p class="sub" id="pageSub">OpenClaw 配置面板</p>
+    <form id="loginForm">
+      <div class="field">
+        <label for="username">用户名</label>
+        <input id="username" autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="password">密码</label>
+        <input id="password" type="password" autocomplete="current-password">
+      </div>
+      <div class="field hidden" id="confirmField">
+        <label for="confirmPassword">确认密码</label>
+        <input id="confirmPassword" type="password" autocomplete="new-password">
+      </div>
+      <div class="field" id="captchaField">
+        <label for="captchaCode">验证码</label>
+        <div class="captcha-row">
+          <input id="captchaCode" autocomplete="off" maxlength="6">
+          <div class="captcha-box" id="captchaBox"></div>
+          <button type="button" class="secondary" id="refreshCaptchaBtn">刷新</button>
+        </div>
+      </div>
+      <button type="submit" class="primary" id="submitBtn">登录</button>
+      <div class="status" id="statusText"></div>
+    </form>
+  </div>
+
+  <script>
+    const PANEL_BASE_PATH = '__BASE_PATH__';
+    const loginForm = document.getElementById('loginForm');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const confirmField = document.getElementById('confirmField');
+    const confirmPasswordInput = document.getElementById('confirmPassword');
+    const captchaField = document.getElementById('captchaField');
+    const captchaCodeInput = document.getElementById('captchaCode');
+    const captchaBox = document.getElementById('captchaBox');
+    const refreshCaptchaBtn = document.getElementById('refreshCaptchaBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const statusText = document.getElementById('statusText');
+    const pageTitle = document.getElementById('pageTitle');
+    const pageSub = document.getElementById('pageSub');
+    let captchaId = '';
+    let pageMode = 'login';
+
+    function panelPath(path) {
+      return `${PANEL_BASE_PATH}${path}`;
+    }
+
+    function appRoot() {
+      return `${PANEL_BASE_PATH || ''}/`;
+    }
+
+    function setBusy(busy) {
+      submitBtn.disabled = busy;
+      refreshCaptchaBtn.disabled = busy;
+    }
+
+    function setStatus(message = '', type = '') {
+      statusText.textContent = message;
+      statusText.className = type ? `status ${type}` : 'status';
+    }
+
+    function nextPath() {
+      const current = new URL(window.location.href);
+      const next = current.searchParams.get('next') || '';
+      if (!next.startsWith('/')) {
+        return appRoot();
+      }
+      return next;
+    }
+
+    function applyMode(mode) {
+      pageMode = mode;
+      if (mode === 'setup') {
+        pageTitle.textContent = '首次初始化';
+        pageSub.textContent = '设置唯一账号';
+        submitBtn.textContent = '初始化';
+        confirmField.classList.remove('hidden');
+        captchaField.classList.add('hidden');
+        captchaCodeInput.value = '';
+        captchaBox.innerHTML = '';
+        captchaId = '';
+        passwordInput.autocomplete = 'new-password';
+      } else {
+        pageTitle.textContent = '登录';
+        pageSub.textContent = 'OpenClaw 配置面板';
+        submitBtn.textContent = '登录';
+        confirmField.classList.add('hidden');
+        captchaField.classList.remove('hidden');
+        confirmPasswordInput.value = '';
+        passwordInput.autocomplete = 'current-password';
+      }
+    }
+
+    async function request(path, options = {}) {
+      const response = await fetch(panelPath(path), options);
+      const payload = await response.json().catch(() => ({ ok: false, error: '响应解析失败' }));
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.error || '请求失败');
+      }
+      return payload.data;
+    }
+
+    async function loadCaptcha() {
+      if (pageMode === 'setup') return;
+      try {
+        const data = await request('/api/auth/captcha', { cache: 'no-store' });
+        captchaId = data.captcha_id;
+        captchaBox.innerHTML = data.svg;
+      } catch (error) {
+        captchaId = '';
+        captchaBox.innerHTML = '';
+        setStatus(String(error), 'error');
+      }
+    }
+
+    async function checkSession() {
+      try {
+        const data = await request('/api/auth/state', { cache: 'no-store' });
+        if (!data.initialized) {
+          applyMode('setup');
+          return false;
+        }
+        applyMode('login');
+        if (data.logged_in) {
+          window.location.replace(nextPath());
+          return true;
+        }
+      } catch (error) {
+        setStatus(String(error), 'error');
+      }
+      return false;
+    }
+
+    refreshCaptchaBtn.addEventListener('click', async () => {
+      setStatus('');
+      await loadCaptcha();
+    });
+
+    loginForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      setBusy(true);
+      setStatus('');
+      try {
+        const endpoint = pageMode === 'setup' ? '/api/auth/setup' : '/api/auth/login';
+        const data = await request(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: usernameInput.value.trim(),
+            password: passwordInput.value,
+            confirm_password: confirmPasswordInput.value,
+            captcha_id: captchaId,
+            captcha_code: captchaCodeInput.value.trim(),
+            next: nextPath(),
+          }),
+        });
+        setStatus(pageMode === 'setup' ? '初始化完成，正在进入面板。' : '登录成功，正在进入面板。', 'ok');
+        window.location.replace(data.redirect_to || appRoot());
+      } catch (error) {
+        if (pageMode !== 'setup') {
+          captchaCodeInput.value = '';
+          await loadCaptcha();
+        }
+        setStatus(String(error), 'error');
+      } finally {
+        setBusy(false);
+      }
+    });
+
+    (async () => {
+      if (await checkSession()) return;
+      if (pageMode !== 'setup') {
+        await loadCaptcha();
+      }
+      usernameInput.focus();
+    })();
+  </script>
+</body>
+</html>

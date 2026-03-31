@@ -1,0 +1,4627 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>OpenClaw 配置面板</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1020;
+      --card: rgba(17, 24, 39, 0.88);
+      --card-2: rgba(30, 41, 59, 0.88);
+      --border: rgba(148, 163, 184, 0.2);
+      --text: #e5eefb;
+      --muted: #9fb0c9;
+      --accent: #60a5fa;
+      --accent-2: #34d399;
+      --danger: #f87171;
+      --shadow: 0 24px 64px rgba(2, 6, 23, 0.45);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(59, 130, 246, 0.22), transparent 32%),
+        radial-gradient(circle at top right, rgba(52, 211, 153, 0.18), transparent 28%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .container {
+      width: min(1240px, calc(100vw - 32px));
+      margin: 24px auto 40px;
+    }
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+    .hero-tools {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .title {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0 0 8px;
+    }
+    .layout {
+      display: block;
+    }
+    .card {
+      background: linear-gradient(180deg, var(--card), var(--card-2));
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+    .card h2 {
+      margin: 0 0 16px;
+      font-size: 16px;
+    }
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .tab-btn {
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: rgba(15, 23, 42, 0.72);
+      color: var(--muted);
+      border-radius: 12px;
+      padding: 12px 16px;
+      cursor: pointer;
+      font: inherit;
+    }
+    .tab-btn.active {
+      background: linear-gradient(90deg, rgba(37, 99, 235, 0.9), rgba(56, 189, 248, 0.9));
+      color: white;
+      border-color: transparent;
+    }
+    .tab-panel.hidden { display: none; }
+    .hidden { display: none !important; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .field.span-2 { grid-column: span 2; }
+    label {
+      font-size: 13px;
+      color: var(--muted);
+    }
+    input, textarea, select {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.82);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font: inherit;
+    }
+    textarea {
+      min-height: 200px;
+      resize: vertical;
+      line-height: 1.55;
+    }
+    a {
+      color: #93c5fd;
+    }
+    #wecomBotIds {
+      min-height: 96px;
+    }
+    #oauthRedirectUrl {
+      min-height: 104px;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: rgba(96, 165, 250, 0.9);
+      box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.16);
+    }
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font: inherit;
+      cursor: pointer;
+      transition: transform .12s ease, opacity .12s ease, background .12s ease;
+    }
+    button:hover { transform: translateY(-1px); }
+    button:disabled { opacity: .6; cursor: wait; transform: none; }
+    .primary {
+      background: linear-gradient(90deg, #2563eb, #38bdf8);
+      color: white;
+    }
+    .secondary {
+      background: rgba(148, 163, 184, 0.14);
+      color: var(--text);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+    }
+    .toggle-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      margin-top: 12px;
+    }
+    .toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .toggle input {
+      width: 16px;
+      height: 16px;
+      padding: 0;
+      margin: 0;
+    }
+    .list-box, .status-box, .log-box {
+      background: rgba(2, 6, 23, 0.5);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .table-box {
+      max-height: calc(100vh - 220px);
+      overflow: auto;
+    }
+    .tab-panel > .list-box.table-box {
+      max-height: none;
+      overflow: visible;
+    }
+    .modal .table-box {
+      max-height: min(60vh, 720px);
+      overflow: auto;
+    }
+    .table-box th.selection-cell,
+    .table-box td.selection-cell {
+      width: 44px;
+      text-align: center;
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+    .provider-table {
+      user-select: text;
+    }
+    .provider-table td,
+    .provider-table th,
+    .provider-table .cell-wrap,
+    .provider-table .cell-ellipsis {
+      user-select: text;
+      -webkit-user-drag: none;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      table-layout: fixed;
+    }
+    th, td {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+      vertical-align: top;
+    }
+    th {
+      color: var(--muted);
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      background: rgba(2, 6, 23, 0.92);
+    }
+    .cell-ellipsis {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .cell-wrap {
+      display: block;
+      word-break: break-word;
+      line-height: 1.45;
+    }
+    .row-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-start;
+      flex-wrap: nowrap;
+      white-space: nowrap;
+    }
+    .tiny-btn {
+      padding: 6px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .reorder-stack {
+      display: inline-flex;
+      flex-direction: row;
+      gap: 6px;
+      align-items: center;
+    }
+    .drag-handle {
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: rgba(15, 23, 42, 0.68);
+      cursor: grab;
+      user-select: none;
+      -webkit-user-drag: element;
+    }
+    .drag-handle:active {
+      cursor: grabbing;
+    }
+    .drag-hint {
+      color: #cbd5e1;
+      font-size: 14px;
+      line-height: 1;
+      letter-spacing: 0.08em;
+      user-select: none;
+      pointer-events: none;
+    }
+    tr.draggable-row {
+      cursor: default;
+    }
+    tr.draggable-row.dragging {
+      opacity: 0.45;
+    }
+    tr.draggable-row.drag-over td {
+      background: rgba(96, 165, 250, 0.08);
+    }
+    .inline-status {
+      margin-top: 8px;
+      min-height: 18px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .api-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(96, 165, 250, 0.12);
+      border: 1px solid rgba(96, 165, 250, 0.22);
+      color: #dbeafe;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .star-btn {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background: rgba(15, 23, 42, 0.72);
+      color: #94a3b8;
+      font-size: 16px;
+      line-height: 1;
+    }
+    .star-btn.active {
+      color: #fbbf24;
+      border-color: rgba(251, 191, 36, 0.35);
+      background: rgba(251, 191, 36, 0.14);
+    }
+    .provider-site-cell {
+      position: relative;
+      min-width: 0;
+      padding-right: 56px;
+    }
+    .provider-site-text {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .provider-star-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(251, 191, 36, 0.12);
+      border: 1px solid rgba(251, 191, 36, 0.28);
+      color: #fde68a;
+      font-size: 11px;
+      white-space: nowrap;
+      position: absolute;
+      top: 50%;
+      right: 0;
+      transform: translateY(-50%);
+    }
+    .switch {
+      position: relative;
+      display: inline-flex;
+      width: 42px;
+      height: 24px;
+      vertical-align: middle;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      position: absolute;
+    }
+    .slider {
+      position: absolute;
+      inset: 0;
+      cursor: pointer;
+      background: rgba(148, 163, 184, 0.22);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      transition: .2s ease;
+      border-radius: 999px;
+    }
+    .slider::before {
+      content: "";
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      left: 2px;
+      top: 2px;
+      background: #e5eefb;
+      border-radius: 50%;
+      transition: .2s ease;
+      box-shadow: 0 2px 8px rgba(2, 6, 23, 0.35);
+    }
+    .switch input:checked + .slider {
+      background: rgba(52, 211, 153, 0.35);
+      border-color: rgba(52, 211, 153, 0.55);
+    }
+    .switch input:checked + .slider::before {
+      transform: translateX(18px);
+      background: white;
+    }
+    .switch input:focus + .slider {
+      box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.16);
+    }
+    .checkbox-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      max-height: 340px;
+      overflow: auto;
+    }
+    .provider-model-table {
+      max-height: calc(100vh - 320px);
+      overflow: auto;
+    }
+    .provider-model-table table {
+      table-layout: auto;
+      min-width: 980px;
+    }
+    .provider-model-table th,
+    .provider-model-table td {
+      padding: 8px 10px;
+      vertical-align: middle;
+    }
+    .provider-model-table .provider-model-id {
+      display: grid;
+      gap: 4px;
+      line-height: 1.4;
+      min-width: 0;
+    }
+    .provider-model-table .provider-model-id strong {
+      font-size: 13px;
+      word-break: break-word;
+    }
+    .provider-model-table .provider-model-id .hint {
+      font-size: 11px;
+    }
+    .provider-model-table .provider-model-api-select {
+      min-width: 180px;
+      padding: 8px 10px;
+    }
+    .provider-model-table .provider-model-route-select {
+      min-width: 260px;
+      padding: 8px 10px;
+    }
+    .provider-model-table tr.is-disabled td {
+      opacity: 0.62;
+    }
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.68);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+    .checkbox-item input {
+      width: 16px;
+      height: 16px;
+      margin: 0;
+    }
+    .provider-order-list {
+      display: grid;
+      gap: 10px;
+    }
+    .provider-order-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.68);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+    .provider-order-item.dragging {
+      opacity: 0.45;
+    }
+    .provider-order-item.drag-over {
+      border-color: rgba(96, 165, 250, 0.65);
+      background: rgba(96, 165, 250, 0.08);
+    }
+    .provider-order-rank {
+      width: 28px;
+      color: var(--muted);
+      font-size: 12px;
+      flex: 0 0 auto;
+    }
+    .provider-order-label {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .status-item {
+      background: rgba(15, 23, 42, 0.66);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .status-item .k {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+    .status-item .v {
+      word-break: break-word;
+      line-height: 1.45;
+    }
+    .home-shell {
+      display: grid;
+      gap: 16px;
+    }
+    .home-hero-card {
+      position: relative;
+      overflow: hidden;
+      padding: 22px;
+      border-radius: 20px;
+      border: 1px solid rgba(96, 165, 250, 0.24);
+      background:
+        radial-gradient(circle at top right, rgba(56, 189, 248, 0.22), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(52, 211, 153, 0.14), transparent 24%),
+        linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.9));
+      box-shadow: var(--shadow);
+    }
+    .home-hero-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .home-kicker {
+      color: #93c5fd;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .home-title {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.25;
+    }
+    .home-action-stack {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .home-metric-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .home-metric {
+      background: rgba(15, 23, 42, 0.62);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      border-radius: 16px;
+      padding: 14px;
+      min-height: 94px;
+    }
+    .home-metric .metric-k {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+    .home-metric .metric-v {
+      display: block;
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+    .home-summary-line {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .home-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .home-panel {
+      background: rgba(2, 6, 23, 0.54);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      border-radius: 18px;
+      padding: 18px;
+    }
+    .home-panel.span-2 {
+      grid-column: span 2;
+    }
+    .home-panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .home-panel-title {
+      margin: 0;
+      font-size: 16px;
+    }
+    .home-kv-list {
+      display: grid;
+      gap: 10px;
+    }
+    .home-kv-item {
+      display: grid;
+      grid-template-columns: 120px minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(15, 23, 42, 0.58);
+      border: 1px solid rgba(148, 163, 184, 0.1);
+    }
+    .home-kv-key {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .home-kv-value {
+      line-height: 1.55;
+      word-break: break-word;
+    }
+    .home-mini-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .home-mini-card {
+      background: rgba(15, 23, 42, 0.62);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 16px;
+      padding: 14px;
+      min-height: 132px;
+    }
+    .home-mini-card-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+    .home-provider-card-title {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      align-items: start;
+      justify-content: start;
+      gap: 8px;
+    }
+    .home-provider-name {
+      display: block;
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .home-provider-chip-row {
+      display: flex;
+      justify-content: flex-start;
+      min-width: 0;
+    }
+    .home-provider-line {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 6px;
+      align-items: baseline;
+    }
+    .home-provider-line-label {
+      color: var(--text);
+      font-weight: 600;
+      min-width: 0;
+    }
+    .home-provider-line-value {
+      display: block;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .home-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(96, 165, 250, 0.14);
+      border: 1px solid rgba(96, 165, 250, 0.2);
+      color: #dbeafe;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .home-mini-meta {
+      display: grid;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .home-mini-meta strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+    .home-session-meta {
+      display: grid;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .home-session-line strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+    .home-raw pre,
+    .home-log pre {
+      max-height: 360px;
+      overflow: auto;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: rgba(52, 211, 153, 0.12);
+      color: #a7f3d0;
+      border: 1px solid rgba(52, 211, 153, 0.25);
+    }
+    .badge.error {
+      background: rgba(248, 113, 113, 0.12);
+      color: #fecaca;
+      border-color: rgba(248, 113, 113, 0.22);
+    }
+    .flash-row {
+      animation: flash-row-bg 1.8s ease;
+    }
+    @keyframes flash-row-bg {
+      0% { background: rgba(37, 99, 235, 0.34); }
+      100% { background: transparent; }
+    }
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .toolbar .grow {
+      flex: 1 1 260px;
+    }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.72);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 50;
+    }
+    .modal-backdrop.hidden {
+      display: none;
+    }
+    .modal {
+      width: min(960px, calc(100vw - 40px));
+      max-height: calc(100vh - 40px);
+      overflow: auto;
+      background: linear-gradient(180deg, var(--card), var(--card-2));
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .modal-title {
+      margin: 0;
+      font-size: 18px;
+    }
+    .provider-modal {
+      width: min(1220px, calc(100vw - 28px));
+    }
+    .provider-modal .grid {
+      grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+      gap: 12px 14px;
+      align-items: start;
+    }
+    .provider-modal #apiKeys {
+      min-height: 104px;
+      max-height: 180px;
+    }
+    .provider-modal .list-box {
+      padding: 10px 12px;
+    }
+    .provider-modal .provider-model-table {
+      max-height: min(42vh, 420px);
+    }
+    .provider-model-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .provider-model-toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .provider-modal-actions {
+      position: sticky;
+      bottom: 0;
+      padding-top: 12px;
+      margin-top: 14px;
+      background: linear-gradient(180deg, rgba(11, 16, 32, 0), rgba(11, 16, 32, 0.92) 26%, rgba(11, 16, 32, 0.98));
+      z-index: 1;
+    }
+    .diff-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .diff-summary-card {
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(15, 23, 42, 0.62);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+    .diff-summary-card .k {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+    .diff-summary-card .v {
+      display: block;
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+    .diff-provider-list {
+      display: grid;
+      gap: 12px;
+    }
+    .diff-provider-card {
+      padding: 14px;
+      border-radius: 16px;
+      background: rgba(15, 23, 42, 0.62);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      display: grid;
+      gap: 10px;
+    }
+    .diff-provider-card.changed {
+      border-color: rgba(96, 165, 250, 0.32);
+      background: linear-gradient(180deg, rgba(30, 64, 175, 0.12), rgba(15, 23, 42, 0.72));
+    }
+    .diff-provider-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .diff-provider-title {
+      font-weight: 600;
+      word-break: break-word;
+    }
+    .diff-provider-lines {
+      display: grid;
+      gap: 6px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+    .diff-provider-lines strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+    .diff-provider-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .diff-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: rgba(148, 163, 184, 0.12);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      color: var(--text);
+    }
+    .oauth-link-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .oauth-link-row input {
+      flex: 1 1 320px;
+    }
+    .oauth-debug {
+      margin-top: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 14px;
+      background: rgba(2, 6, 23, 0.42);
+      overflow: hidden;
+    }
+    .oauth-debug summary {
+      cursor: pointer;
+      list-style: none;
+      padding: 12px 14px;
+      color: var(--muted);
+      user-select: none;
+    }
+    .oauth-debug summary::-webkit-details-marker {
+      display: none;
+    }
+    .oauth-debug pre {
+      padding: 0 14px 14px;
+      margin: 0;
+    }
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.65;
+    }
+    @media (max-width: 980px) {
+      .home-hero-head,
+      .home-panel-head {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .home-action-stack {
+        justify-content: flex-start;
+      }
+      .home-grid,
+      .home-metric-grid {
+        grid-template-columns: 1fr;
+      }
+      .home-panel.span-2 {
+        grid-column: auto;
+      }
+      .home-kv-item {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+      .grid, .checkbox-grid, .status-grid { grid-template-columns: 1fr; }
+      .field.span-2 { grid-column: auto; }
+      .provider-modal {
+        width: min(1220px, calc(100vw - 16px));
+      }
+      .provider-modal .grid {
+        grid-template-columns: 1fr;
+      }
+      .provider-modal .provider-model-table {
+        max-height: min(46vh, 360px);
+      }
+      .hero,
+      .hero-tools { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="hero">
+      <div>
+        <h1 class="title">OpenClaw 配置面板</h1>
+      </div>
+      <div class="hero-tools">
+        <button class="secondary" id="logoutBtn">退出登录</button>
+      </div>
+    </div>
+
+    <div class="layout">
+      <section class="card">
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="home">首页</button>
+          <button class="tab-btn" data-tab="models">模型库</button>
+          <button class="tab-btn" data-tab="providers">Provider 管理</button>
+          <button class="tab-btn" data-tab="channels">Channels 管理</button>
+          <button class="tab-btn" data-tab="agents">Agent 管理</button>
+        </div>
+
+        <div class="tab-panel" id="tab-home">
+          <div class="home-shell">
+            <div class="home-hero-card">
+              <div class="home-hero-head">
+                <div>
+                  <div class="home-kicker">OpenClaw Control Center</div>
+                  <h2 class="home-title">OpenClaw 控制台</h2>
+                </div>
+                <div class="home-action-stack">
+                  <button class="secondary" id="restartBtn">重启 OpenClaw</button>
+                  <button class="primary" id="applyCurrentBtn" title="将面板里的所有 Agent / Provider / Channel 最新配置全量刷入 OpenClaw，并重启网关。">刷新为最新配置</button>
+                </div>
+              </div>
+              <div class="home-metric-grid">
+                <div class="home-metric">
+                  <span class="metric-k">运行中 main 默认模型</span>
+                  <span class="metric-v" id="currentDefault">-</span>
+                </div>
+                <div class="home-metric">
+                  <span class="metric-k">运行中 main 主 Provider</span>
+                  <span class="metric-v" id="currentProvider">-</span>
+                </div>
+                <div class="home-metric">
+                  <span class="metric-k">运行中 fallback 数</span>
+                  <span class="metric-v" id="runtimeFallbackCount">-</span>
+                </div>
+                <div class="home-metric">
+                  <span class="metric-k">面板启用 Provider</span>
+                  <span class="metric-v" id="enabledProviderCount">-</span>
+                </div>
+                <div class="home-metric">
+                  <span class="metric-k">面板 Agent 数</span>
+                  <span class="metric-v" id="panelAgentCount">-</span>
+                </div>
+                <div class="home-metric">
+                  <span class="metric-k">面板 Channel 数</span>
+                  <span class="metric-v" id="panelChannelCount">-</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="home-grid">
+              <div class="home-panel span-2">
+                <div class="home-panel-head">
+                  <div>
+                    <h3 class="home-panel-title">运行方式</h3>
+                  </div>
+                </div>
+                <div class="home-kv-list" id="runtimeAuthSummary"></div>
+                <div class="grid" style="margin-top:14px;">
+                  <div class="field">
+                    <label for="oauthDefaultModelSelect">OAuth 默认模型</label>
+                    <select id="oauthDefaultModelSelect"></select>
+                  </div>
+                </div>
+                <div class="actions">
+                  <button class="secondary" id="openOauthLoginBtn">OpenAI OAuth 登录</button>
+                  <button class="secondary" id="switchProviderModeBtn">切到 Provider</button>
+                  <button class="primary" id="switchOauthModeBtn">切到 OAuth</button>
+                </div>
+              </div>
+
+              <div class="home-panel span-2">
+                <div class="home-panel-head">
+                  <div>
+                    <h3 class="home-panel-title">Agent 摘要</h3>
+                  </div>
+                </div>
+                <div class="home-mini-grid" id="homeAgentCards"></div>
+              </div>
+
+              <div class="home-panel span-2">
+                <div class="home-panel-head">
+                  <div>
+                    <h3 class="home-panel-title">启用 Provider 摘要</h3>
+                  </div>
+                </div>
+                <div class="home-mini-grid" id="homeProviderCards"></div>
+              </div>
+
+              <div class="home-panel span-2">
+                <div class="home-panel-head">
+                  <div>
+                    <h3 class="home-panel-title">当前在线会话</h3>
+                  </div>
+                </div>
+                <div class="home-mini-grid" id="homeSessionCards"></div>
+              </div>
+
+              <div class="home-panel home-log">
+                <div class="home-panel-head">
+                  <div>
+                    <h3 class="home-panel-title">操作输出</h3>
+                  </div>
+                </div>
+                <div class="log-box">
+                  <pre id="logOutput">等待操作…</pre>
+                </div>
+              </div>
+
+              <div class="home-panel home-raw">
+                <div class="home-panel-head">
+                  <div>
+                    <h3 class="home-panel-title">OpenClaw 原始状态</h3>
+                  </div>
+                </div>
+                <div class="log-box">
+                  <pre id="statusOutput">{}</pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-panel hidden" id="tab-models">
+          <h2>全局模型库</h2>
+          <div class="field">
+            <label for="modelImport">导入模型列表</label>
+            <textarea id="modelImport" placeholder="gpt-5.2&#10;grok-4 | star&#10;claude-sonnet-4 | disabled&#10;gpt-5.2 | GPT-5.2 | star"></textarea>
+          </div>
+          <div class="actions">
+            <button class="primary" id="importModelsBtn">导入并覆盖模型库</button>
+            <button class="secondary" id="exportModelsBtn">把当前模型库回填到导入框</button>
+            <button class="secondary" id="clearImportBtn">清空导入框</button>
+          </div>
+          <div class="inline-status" id="modelImportStatus">当前模型库 0 个模型。</div>
+          <div class="field" style="margin-top:18px;">
+            <label>当前模型库</label>
+            <div class="list-box table-box">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width:25%">模型 ID</th>
+                    <th style="width:20%">显示名</th>
+                    <th style="width:19%">推荐 API</th>
+                    <th style="width:10%">状态</th>
+                    <th style="width:10%">星标</th>
+                    <th style="width:16%">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="modelCatalogTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-panel hidden" id="tab-providers">
+          <h2>Provider 管理</h2>
+          <div class="toolbar">
+            <input class="grow" id="providerSearch" placeholder="搜索 Site / 协议 / 模型 / 路由">
+            <button class="secondary" id="refreshProviderModelsBtn" title="仅对当前勾选的 Provider 做模型探测：遍历模型库并尝试不同 API 类型与路由后缀，自动回写可用模型；没有可用模型的 Provider 会被禁用，并从 Agent 绑定顺序中移除。不会直接应用到 OpenClaw。">一键刷新可用模型</button>
+            <button class="secondary" id="importCcswitchBtn">导入 CCSwitch SQL</button>
+            <button class="primary" id="newProviderBtn">新增 Provider</button>
+          </div>
+          <div class="list-box table-box">
+            <table class="provider-table">
+              <thead>
+                <tr>
+                  <th class="selection-cell"><input type="checkbox" id="providerSelectAll" title="勾选当前筛选结果里的全部 Provider"></th>
+                  <th style="width:32%">Site</th>
+                  <th style="width:14%">协议</th>
+                  <th style="width:8%">状态</th>
+                  <th style="width:6%">Keys</th>
+                  <th style="width:7%">模型数</th>
+                  <th style="width:13%">默认模型</th>
+                  <th style="width:20%">操作</th>
+                </tr>
+              </thead>
+              <tbody id="providerTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="tab-panel hidden" id="tab-channels">
+          <h2>Channels 管理</h2>
+          <div class="toolbar">
+            <input class="grow" id="channelSearch" placeholder="搜索 Channel / 账号 / 名称 / 已绑定 Agent">
+            <button class="primary" id="newChannelBtn">新增 Channel</button>
+          </div>
+          <div class="list-box table-box">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:14%">平台</th>
+                  <th style="width:14%">账号</th>
+                  <th style="width:18%">名称</th>
+                  <th style="width:16%">接入类型</th>
+                  <th style="width:10%">状态</th>
+                  <th style="width:14%">归属 Agent</th>
+                  <th style="width:14%">操作</th>
+                </tr>
+              </thead>
+              <tbody id="channelTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="tab-panel hidden" id="tab-agents">
+          <h2>Agent 管理</h2>
+          <div class="toolbar">
+            <input class="grow" id="agentSearch" placeholder="搜索 Agent / Channel / Provider">
+            <button class="primary" id="newAgentBtn">新增 Agent</button>
+          </div>
+          <div class="list-box table-box">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:16%">Agent ID</th>
+                  <th style="width:18%">显示名称</th>
+                  <th style="width:22%">Channels</th>
+                  <th style="width:26%">主 Provider</th>
+                  <th style="width:18%">操作</th>
+                </tr>
+              </thead>
+              <tbody id="agentTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+    </div>
+  </div>
+
+  <input id="ccswitchImportInput" type="file" accept=".sql,text/plain,application/sql" class="hidden">
+
+  <div class="modal-backdrop hidden" id="providerRefreshDiffModalBackdrop">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 class="modal-title">刷新可用模型结果</h3>
+        <button class="secondary" id="closeProviderRefreshDiffModalBtn">关闭</button>
+      </div>
+      <div class="diff-summary-grid" id="providerRefreshDiffSummary"></div>
+      <div class="diff-provider-list" id="providerRefreshDiffList"></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="oauthLoginModalBackdrop">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 class="modal-title">OpenAI OAuth 登录</h3>
+        <button class="secondary" id="closeOauthLoginModalBtn">关闭</button>
+      </div>
+      <div class="status-grid" id="oauthLoginStateGrid"></div>
+      <div class="field" style="margin-top:16px;">
+        <label for="oauthLoginUrl">登录链接</label>
+        <div class="oauth-link-row">
+          <input id="oauthLoginUrl" readonly placeholder="点击开始登录后生成">
+          <button class="secondary" id="copyOauthLoginUrlBtn" type="button">复制链接</button>
+          <button class="secondary" id="openOauthLoginUrlBtn" type="button">打开链接</button>
+        </div>
+      </div>
+      <div class="field" style="margin-top:16px;">
+        <label for="oauthRedirectUrl">浏览器回跳地址</label>
+        <textarea id="oauthRedirectUrl" placeholder="在本地浏览器完成 OAuth 登录后，把完整 redirect URL 粘贴到这里"></textarea>
+        <div class="hint">登录命令会在服务器侧等待回调地址；这里只负责把回跳地址提交给 OpenClaw 原生命令。</div>
+      </div>
+      <div class="actions">
+        <button class="primary" id="startOauthLoginBtn">开始登录</button>
+        <button class="secondary" id="submitOauthRedirectBtn">提交回调</button>
+        <button class="secondary" id="cancelOauthLoginBtn">取消登录</button>
+      </div>
+      <details class="oauth-debug">
+        <summary>调试输出</summary>
+        <pre id="oauthLoginLog">等待开始…</pre>
+      </details>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="providerModalBackdrop">
+    <div class="modal provider-modal">
+      <div class="modal-head">
+        <h3 class="modal-title" id="providerModalTitle">新增 Provider</h3>
+        <button class="secondary" id="closeProviderModalBtn">关闭</button>
+      </div>
+      <div class="grid">
+        <div class="field span-2">
+          <label for="baseUrl">Site</label>
+          <input id="baseUrl" placeholder="https://example.com">
+        </div>
+        <div class="field">
+          <label for="defaultModelId">默认模型</label>
+          <select id="defaultModelId">
+            <option value="">请先启用模型</option>
+          </select>
+        </div>
+        <div class="field provider-keys-field">
+          <label for="apiKeys">API Keys</label>
+          <textarea id="apiKeys" placeholder="一行一把 key"></textarea>
+        </div>
+        <div class="field span-2">
+          <div class="hint" id="apiSuggestion">按模型单独维护 API 类型与路由后缀；Site 只填写基础网址，不要手动拼 /v1。</div>
+        </div>
+        <div class="field span-2">
+          <label>此 Provider 可用模型</label>
+          <div class="provider-model-toolbar">
+            <div class="provider-model-toolbar-left">
+              <label class="toggle">
+                <input type="checkbox" id="providerModelSelectAll">
+                <span>全选</span>
+              </label>
+              <button class="secondary tiny-btn" id="providerModelInvertBtn" type="button">反选</button>
+            </div>
+            <div class="hint" id="providerModelSelectionSummary">已选 0 / 0</div>
+          </div>
+          <div class="list-box">
+            <div id="modelCheckboxes"></div>
+          </div>
+        </div>
+      </div>
+      <div class="actions provider-modal-actions">
+        <button class="secondary" id="saveProviderBtn">保存</button>
+        <button class="secondary" id="deleteProviderBtn">删除</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="ccswitchImportModalBackdrop">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 class="modal-title">导入 CCSwitch SQL</h3>
+        <button class="secondary" id="closeCcswitchImportModalBtn">关闭</button>
+      </div>
+      <div class="inline-status" id="ccswitchImportStatus">请选择一个 CCSwitch 导出的 SQL 文件。</div>
+      <div class="list-box table-box" style="margin-top:12px;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:7%">选择</th>
+              <th style="width:26%">Site</th>
+              <th style="width:12%">API</th>
+              <th style="width:8%">Keys</th>
+              <th style="width:12%">默认模型</th>
+              <th style="width:13%">来源</th>
+              <th style="width:22%">提示</th>
+            </tr>
+          </thead>
+          <tbody id="ccswitchImportTable">
+            <tr><td colspan="7" class="hint">还没有解析结果。</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="actions">
+        <button class="secondary" id="selectCcswitchFileBtn">重新选择文件</button>
+        <button class="primary" id="applyCcswitchImportBtn">导入选中项</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="agentModalBackdrop">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 class="modal-title" id="agentModalTitle">新增 Agent</h3>
+        <button class="secondary" id="closeAgentModalBtn">关闭</button>
+      </div>
+      <div class="grid">
+        <div class="field">
+          <label for="agentId">Agent ID</label>
+          <input id="agentId" placeholder="例如 chenjie_helper" pattern="[a-z_]+">
+          <div class="hint">只允许小写英文字母和下划线。新增时填写；已存在 Agent 不允许直接改 ID。</div>
+        </div>
+        <div class="field">
+          <label for="agentName">显示名称</label>
+          <input id="agentName" placeholder="例如 陈洁的小跟班agent">
+        </div>
+        <div class="field span-2">
+          <label>此 Agent 使用的 Provider</label>
+          <div class="list-box">
+            <div class="checkbox-grid" id="agentProviderSelection"></div>
+          </div>
+        </div>
+        <div class="field span-2">
+          <label>Provider 顺序</label>
+          <div class="list-box">
+            <div id="agentProviderOrder"></div>
+          </div>
+        </div>
+        <div class="field span-2">
+          <label>此 Agent 绑定的 Channels</label>
+          <div class="list-box">
+            <div class="checkbox-grid" id="agentChannelBindings"></div>
+          </div>
+        </div>
+        <div class="field">
+          <label for="agentElevatedMode">提权模式</label>
+          <select id="agentElevatedMode">
+            <option value="">未设置（沿用当前/默认）</option>
+            <option value="off">关闭</option>
+            <option value="on">开启</option>
+          </select>
+          <div class="hint">关闭后，这个 Agent 即使在支持的通道里也不能直接进入宿主机提权。</div>
+        </div>
+        <div class="field">
+          <label for="agentExecSecurity">宿主机执行策略</label>
+          <select id="agentExecSecurity">
+            <option value="">未设置（沿用当前/默认）</option>
+            <option value="deny">deny：禁止宿主机执行</option>
+            <option value="allowlist">allowlist：仅允许白名单</option>
+            <option value="full">full：完全放开</option>
+          </select>
+          <div class="hint">决定这个 Agent 进入宿主机后能执行到什么程度。</div>
+        </div>
+        <div class="field">
+          <label for="agentAllowFromWebchat">WebChat 允许来源</label>
+          <textarea id="agentAllowFromWebchat" rows="4" placeholder="一行一个来源 ID"></textarea>
+          <div class="hint">Web 管理台不是 Channels 管理的一部分，所以这里只保留 WebChat 来源控制；每行一个来源 ID，填写 <code>*</code> 代表该来源全开。</div>
+        </div>
+        <div class="field">
+          <label for="agentExecAsk">审批策略</label>
+          <select id="agentExecAsk">
+            <option value="">未设置（沿用当前/默认）</option>
+            <option value="off">off：不再询问</option>
+            <option value="on-miss">on-miss：白名单未命中才询问</option>
+            <option value="always">always：每次都询问</option>
+          </select>
+          <div class="hint"><strong>高风险：</strong><code>full + off</code> 基本等于该 Agent 在允许来源下直接获得宿主机全权限。</div>
+        </div>
+        <div class="field span-2">
+          <label for="agentExecAllowlist">允许列表（宿主机命令/路径模式）</label>
+          <textarea id="agentExecAllowlist" rows="4" placeholder="一行一个 pattern，例如 /usr/bin/apt-get 或 ~/.local/bin/*"></textarea>
+          <div class="hint">仅在执行策略为 <code>allowlist</code> 时使用。建议优先放明确命令路径，不要一上来就写太宽的通配符。</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="secondary" id="saveAgentBtn">保存</button>
+        <button class="secondary" id="deleteAgentBtn">删除</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="channelModalBackdrop">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 class="modal-title" id="channelModalTitle">新增 Channel</h3>
+        <button class="secondary" id="closeChannelModalBtn">关闭</button>
+      </div>
+      <div class="grid">
+        <div class="field">
+          <label for="channelPlatform">平台</label>
+          <select id="channelPlatform">
+            <option value="qqbot">QQ</option>
+            <option value="wecom">企微</option>
+            <option value="ddingtalk">钉钉</option>
+            <option value="feishu">飞书</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="channelAccountId">账号 ID</label>
+          <input id="channelAccountId" placeholder="例如 default / chenjie_helper" pattern="[a-z_]+">
+          <div class="hint" id="channelAccountHint">同一平台下的账号 ID 不能重复，只允许小写英文字母和下划线。</div>
+        </div>
+        <div class="field">
+          <label for="channelName">显示名称</label>
+          <input id="channelName" placeholder="例如 导跟班bot">
+        </div>
+        <div class="field">
+          <label for="channelEnabled">启用状态</label>
+          <select id="channelEnabled">
+            <option value="true">启用</option>
+            <option value="false">禁用</option>
+          </select>
+        </div>
+        <div class="field span-2" id="channelElevatedPermissionsSection">
+          <label for="channelAllowFromQqbot">QQ 提权允许来源</label>
+          <textarea id="channelAllowFromQqbot" rows="4" placeholder="一行一个 sender id"></textarea>
+          <div class="hint">这是 Channel 级权限。填写 QQ sender id；每行一个，填写 <code>*</code> 代表这个 QQ Channel 全开。</div>
+        </div>
+
+        <div class="field span-2" id="channelSectionQqbot">
+          <label>QQ 配置</label>
+          <div class="grid">
+            <div class="field">
+              <label for="qqbotAppId">App ID</label>
+              <input id="qqbotAppId" placeholder="QQBot AppID">
+            </div>
+            <div class="field">
+              <label for="qqbotClientSecret">Client Secret</label>
+              <input id="qqbotClientSecret" placeholder="直接填写 Secret">
+            </div>
+            <div class="field span-2">
+              <label for="qqbotClientSecretFile">Client Secret File</label>
+              <input id="qqbotClientSecretFile" placeholder="/root/.openclaw/qqbot/secrets/default.secret">
+              <div class="hint">`Client Secret` 和 `Client Secret File` 二选一即可。</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="field span-2 hidden" id="channelSectionDingtalk">
+          <label>钉钉配置</label>
+          <div class="grid">
+            <div class="field">
+              <label for="dingtalkClientId">Client ID</label>
+              <input id="dingtalkClientId" placeholder="钉钉 AppKey">
+            </div>
+            <div class="field">
+              <label for="dingtalkClientSecret">Client Secret</label>
+              <input id="dingtalkClientSecret" placeholder="钉钉 AppSecret">
+            </div>
+          </div>
+        </div>
+
+        <div class="field span-2 hidden" id="channelSectionWecom">
+          <label>企微配置</label>
+          <div class="grid">
+            <div class="field">
+              <label for="wecomMode">模式</label>
+              <select id="wecomMode">
+                <option value="agent">自建应用</option>
+                <option value="bot">智能机器人（Webhook）</option>
+                <option value="bot-websocket">智能机器人（WebSocket）</option>
+              </select>
+            </div>
+            <div class="field hidden" id="wecomBotWebhookFieldsTokenWrap">
+              <label for="wecomToken">Token</label>
+              <input id="wecomToken" placeholder="Webhook Token / Agent Token">
+            </div>
+            <div class="field hidden" id="wecomBotWebhookFieldsAesWrap">
+              <label for="wecomEncodingAESKey">Encoding AES Key</label>
+              <input id="wecomEncodingAESKey" placeholder="Webhook/Agent EncodingAESKey">
+            </div>
+            <div class="field hidden" id="wecomBotFieldsAibotWrap">
+              <label for="wecomAibotid">AI Bot ID</label>
+              <input id="wecomAibotid" placeholder="Webhook 模式可选">
+            </div>
+            <div class="field hidden" id="wecomBotFieldsBotIdsWrap">
+              <label for="wecomBotIds">Bot IDs</label>
+              <textarea id="wecomBotIds" placeholder="一行一个 Bot ID"></textarea>
+            </div>
+            <div class="field hidden" id="wecomBotFieldsReceiveWrap">
+              <label for="wecomReceiveId">Receive ID</label>
+              <input id="wecomReceiveId" placeholder="Webhook 模式可选">
+            </div>
+            <div class="field hidden" id="wecomBotWsFieldsBotIdWrap">
+              <label for="wecomBotId">Bot ID</label>
+              <input id="wecomBotId" placeholder="WebSocket BotID">
+            </div>
+            <div class="field hidden" id="wecomBotWsFieldsSecretWrap">
+              <label for="wecomSecret">Secret</label>
+              <input id="wecomSecret" placeholder="WebSocket Secret">
+            </div>
+            <div class="field hidden" id="wecomAgentFieldsCorpIdWrap">
+              <label for="wecomCorpId">Corp ID</label>
+              <input id="wecomCorpId" placeholder="企业 ID">
+            </div>
+            <div class="field hidden" id="wecomAgentFieldsCorpSecretWrap">
+              <label for="wecomCorpSecret">Corp Secret</label>
+              <input id="wecomCorpSecret" placeholder="应用 Secret">
+            </div>
+            <div class="field hidden" id="wecomAgentFieldsAgentIdWrap">
+              <label for="wecomAgentId">Agent ID</label>
+              <input id="wecomAgentId" placeholder="可选">
+            </div>
+          </div>
+        </div>
+
+        <div class="field span-2 hidden" id="channelSectionFeishu">
+          <label>飞书配置</label>
+          <div class="grid">
+            <div class="field">
+              <label for="feishuAppId">App ID</label>
+              <input id="feishuAppId" placeholder="飞书 App ID">
+            </div>
+            <div class="field">
+              <label for="feishuAppSecret">App Secret</label>
+              <input id="feishuAppSecret" placeholder="支持明文，或 SecretRef JSON">
+            </div>
+            <div class="field">
+              <label for="feishuConnectionMode">连接模式</label>
+              <select id="feishuConnectionMode">
+                <option value="websocket">websocket</option>
+                <option value="webhook">webhook</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="feishuDomain">域名</label>
+              <select id="feishuDomain">
+                <option value="feishu">feishu</option>
+                <option value="lark">lark</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="feishuEncryptKey">Encrypt Key</label>
+              <input id="feishuEncryptKey" placeholder="可选">
+            </div>
+            <div class="field">
+              <label for="feishuVerificationToken">Verification Token</label>
+              <input id="feishuVerificationToken" placeholder="webhook 模式必填，支持 JSON">
+            </div>
+            <div class="field span-2">
+              <label for="feishuWebhookPath">Webhook Path</label>
+              <input id="feishuWebhookPath" placeholder="/feishu/events">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="secondary" id="saveChannelBtn">保存</button>
+        <button class="secondary" id="deleteChannelBtn">删除</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const PANEL_BASE_PATH = '__BASE_PATH__';
+    let storeState = { modelCatalog: [], providers: {}, selectedProvider: '', agents: {}, agentOrder: [], channelCatalog: [] };
+    let currentProviderKey = '';
+    let currentProviderEnabled = true;
+    let providerModelDraft = [];
+    let selectedProviderIdsState = new Set();
+    let providerRefreshDiffState = null;
+    let currentAgentKey = '';
+    let currentChannelPlatform = '';
+    let currentChannelAccountId = '';
+    let liveConfigState = null;
+    let runtimeStatusState = null;
+    let runtimeAuthState = null;
+    let oauthLoginState = null;
+    let oauthLoginPollTimer = 0;
+    let authSessionsState = [];
+    let agentProviderDraftOrder = [];
+    let ccswitchImportPreviewState = { file_name: '', items: [], skipped: [], summary: {} };
+
+    const modelImportInput = document.getElementById('modelImport');
+    const modelCatalogTable = document.getElementById('modelCatalogTable');
+    const modelImportStatus = document.getElementById('modelImportStatus');
+    const providerTable = document.getElementById('providerTable');
+    const providerSelectAll = document.getElementById('providerSelectAll');
+    const providerSearchInput = document.getElementById('providerSearch');
+    const refreshProviderModelsBtn = document.getElementById('refreshProviderModelsBtn');
+    const providerRefreshDiffModalBackdrop = document.getElementById('providerRefreshDiffModalBackdrop');
+    const providerRefreshDiffSummary = document.getElementById('providerRefreshDiffSummary');
+    const providerRefreshDiffList = document.getElementById('providerRefreshDiffList');
+    const providerModalBackdrop = document.getElementById('providerModalBackdrop');
+    const providerModalTitle = document.getElementById('providerModalTitle');
+    const ccswitchImportInput = document.getElementById('ccswitchImportInput');
+    const ccswitchImportModalBackdrop = document.getElementById('ccswitchImportModalBackdrop');
+    const ccswitchImportStatus = document.getElementById('ccswitchImportStatus');
+    const ccswitchImportTable = document.getElementById('ccswitchImportTable');
+    const agentTable = document.getElementById('agentTable');
+    const agentSearchInput = document.getElementById('agentSearch');
+    const agentModalBackdrop = document.getElementById('agentModalBackdrop');
+    const agentModalTitle = document.getElementById('agentModalTitle');
+    const channelTable = document.getElementById('channelTable');
+    const channelSearchInput = document.getElementById('channelSearch');
+    const channelModalBackdrop = document.getElementById('channelModalBackdrop');
+    const channelModalTitle = document.getElementById('channelModalTitle');
+    const baseUrlInput = document.getElementById('baseUrl');
+    const apiSuggestion = document.getElementById('apiSuggestion');
+    const defaultModelIdSelect = document.getElementById('defaultModelId');
+    const apiKeysInput = document.getElementById('apiKeys');
+    const modelCheckboxes = document.getElementById('modelCheckboxes');
+    const providerModelSelectAll = document.getElementById('providerModelSelectAll');
+    const providerModelInvertBtn = document.getElementById('providerModelInvertBtn');
+    const providerModelSelectionSummary = document.getElementById('providerModelSelectionSummary');
+    const agentIdInput = document.getElementById('agentId');
+    const agentNameInput = document.getElementById('agentName');
+    const agentProviderSelection = document.getElementById('agentProviderSelection');
+    const agentProviderOrder = document.getElementById('agentProviderOrder');
+    const agentChannelBindings = document.getElementById('agentChannelBindings');
+    const agentElevatedModeInput = document.getElementById('agentElevatedMode');
+    const agentAllowFromWebchatInput = document.getElementById('agentAllowFromWebchat');
+    const agentExecSecurityInput = document.getElementById('agentExecSecurity');
+    const agentExecAskInput = document.getElementById('agentExecAsk');
+    const agentExecAllowlistInput = document.getElementById('agentExecAllowlist');
+    const channelPlatformInput = document.getElementById('channelPlatform');
+    const channelAccountIdInput = document.getElementById('channelAccountId');
+    const channelAccountHint = document.getElementById('channelAccountHint');
+    const channelNameInput = document.getElementById('channelName');
+    const channelEnabledInput = document.getElementById('channelEnabled');
+    const channelAllowFromQqbotInput = document.getElementById('channelAllowFromQqbot');
+    const qqbotAppIdInput = document.getElementById('qqbotAppId');
+    const qqbotClientSecretInput = document.getElementById('qqbotClientSecret');
+    const qqbotClientSecretFileInput = document.getElementById('qqbotClientSecretFile');
+    const dingtalkClientIdInput = document.getElementById('dingtalkClientId');
+    const dingtalkClientSecretInput = document.getElementById('dingtalkClientSecret');
+    const wecomModeInput = document.getElementById('wecomMode');
+    const wecomTokenInput = document.getElementById('wecomToken');
+    const wecomEncodingAESKeyInput = document.getElementById('wecomEncodingAESKey');
+    const wecomAibotidInput = document.getElementById('wecomAibotid');
+    const wecomBotIdsInput = document.getElementById('wecomBotIds');
+    const wecomReceiveIdInput = document.getElementById('wecomReceiveId');
+    const wecomBotIdInput = document.getElementById('wecomBotId');
+    const wecomSecretInput = document.getElementById('wecomSecret');
+    const wecomCorpIdInput = document.getElementById('wecomCorpId');
+    const wecomCorpSecretInput = document.getElementById('wecomCorpSecret');
+    const wecomAgentIdInput = document.getElementById('wecomAgentId');
+    const feishuAppIdInput = document.getElementById('feishuAppId');
+    const feishuAppSecretInput = document.getElementById('feishuAppSecret');
+    const feishuConnectionModeInput = document.getElementById('feishuConnectionMode');
+    const feishuDomainInput = document.getElementById('feishuDomain');
+    const feishuEncryptKeyInput = document.getElementById('feishuEncryptKey');
+    const feishuVerificationTokenInput = document.getElementById('feishuVerificationToken');
+    const feishuWebhookPathInput = document.getElementById('feishuWebhookPath');
+    const logOutput = document.getElementById('logOutput');
+    const statusOutput = document.getElementById('statusOutput');
+    const currentDefault = document.getElementById('currentDefault');
+    const currentProvider = document.getElementById('currentProvider');
+    const runtimeAuthSummary = document.getElementById('runtimeAuthSummary');
+    const oauthDefaultModelSelect = document.getElementById('oauthDefaultModelSelect');
+    const runtimeFallbackCount = document.getElementById('runtimeFallbackCount');
+    const enabledProviderCount = document.getElementById('enabledProviderCount');
+    const panelAgentCount = document.getElementById('panelAgentCount');
+    const panelChannelCount = document.getElementById('panelChannelCount');
+    const oauthLoginModalBackdrop = document.getElementById('oauthLoginModalBackdrop');
+    const oauthLoginStateGrid = document.getElementById('oauthLoginStateGrid');
+    const oauthLoginUrlInput = document.getElementById('oauthLoginUrl');
+    const oauthRedirectUrlInput = document.getElementById('oauthRedirectUrl');
+    const oauthLoginLog = document.getElementById('oauthLoginLog');
+    const statusBadge = document.getElementById('statusBadge');
+    const agentInfo = document.getElementById('agentInfo');
+    const homeAgentCards = document.getElementById('homeAgentCards');
+    const homeProviderCards = document.getElementById('homeProviderCards');
+    const homeSessionCards = document.getElementById('homeSessionCards');
+    const openOauthLoginBtn = document.getElementById('openOauthLoginBtn');
+    const switchProviderModeBtn = document.getElementById('switchProviderModeBtn');
+    const switchOauthModeBtn = document.getElementById('switchOauthModeBtn');
+    const startOauthLoginBtn = document.getElementById('startOauthLoginBtn');
+    const submitOauthRedirectBtn = document.getElementById('submitOauthRedirectBtn');
+    const cancelOauthLoginBtn = document.getElementById('cancelOauthLoginBtn');
+    const copyOauthLoginUrlBtn = document.getElementById('copyOauthLoginUrlBtn');
+    const openOauthLoginUrlBtn = document.getElementById('openOauthLoginUrlBtn');
+    const closeProviderModalBtn = document.getElementById('closeProviderModalBtn');
+    const closeOauthLoginModalBtn = document.getElementById('closeOauthLoginModalBtn');
+    const closeProviderRefreshDiffModalBtn = document.getElementById('closeProviderRefreshDiffModalBtn');
+    const closeCcswitchImportModalBtn = document.getElementById('closeCcswitchImportModalBtn');
+    const closeAgentModalBtn = document.getElementById('closeAgentModalBtn');
+    const closeChannelModalBtn = document.getElementById('closeChannelModalBtn');
+    const deleteProviderBtn = document.getElementById('deleteProviderBtn');
+    const deleteAgentBtn = document.getElementById('deleteAgentBtn');
+    const deleteChannelBtn = document.getElementById('deleteChannelBtn');
+    const selectCcswitchFileBtn = document.getElementById('selectCcswitchFileBtn');
+    const applyCcswitchImportBtn = document.getElementById('applyCcswitchImportBtn');
+
+    const API_TYPE_OPTIONS = [
+      'openai-completions',
+      'openai-responses',
+      'anthropic-messages',
+      'google-generative-ai',
+      'ollama',
+    ];
+    const PROVIDER_MODEL_ROUTE_CANDIDATES = [
+      { api: 'openai-completions', route_suffix: '/v1/chat/completions', runtime_supported: true },
+      { api: 'openai-responses', route_suffix: '/v1/responses', runtime_supported: true },
+      { api: 'openai-completions', route_suffix: '/v1/v1/chat/completions', runtime_supported: true },
+      { api: 'openai-responses', route_suffix: '/v1/v1/responses', runtime_supported: true },
+      { api: 'anthropic-messages', route_suffix: '/v1/messages', runtime_supported: true },
+      { api: 'anthropic-messages', route_suffix: '/v1/v1/messages', runtime_supported: true },
+      { api: 'google-generative-ai', route_suffix: '/models/{model}:generateContent', runtime_supported: true },
+      { api: 'google-generative-ai', route_suffix: '/v1beta/models/{model}:generateContent', runtime_supported: true },
+      { api: 'google-generative-ai', route_suffix: '/v1/v1beta/models/{model}:generateContent', runtime_supported: true },
+      { api: 'google-generative-ai', route_suffix: '/v1/models/{model}:generateContent', runtime_supported: true },
+      { api: 'google-generative-ai', route_suffix: '/v1/v1/models/{model}:generateContent', runtime_supported: true },
+      { api: 'ollama', route_suffix: '/api/chat', runtime_supported: true },
+      { api: 'ollama', route_suffix: '/v1/chat', runtime_supported: false },
+      { api: 'ollama', route_suffix: '/v1/v1/chat', runtime_supported: false },
+      { api: 'openai-completions', route_suffix: '/chat/completions', runtime_supported: true },
+      { api: 'openai-responses', route_suffix: '/responses', runtime_supported: true },
+      { api: 'anthropic-messages', route_suffix: '/messages', runtime_supported: true },
+      { api: 'ollama', route_suffix: '/chat', runtime_supported: false },
+    ];
+
+    function panelPath(path) {
+      return `${PANEL_BASE_PATH}${path}`;
+    }
+
+    function confirmAction(message, detail = '') {
+      const text = detail ? `${message}\n${detail}` : message;
+      return window.confirm(text);
+    }
+
+    function getClosestElement(target, selector) {
+      if (!target) return null;
+      if (target instanceof Element) return target.closest(selector);
+      if (target.parentElement) return target.parentElement.closest(selector);
+      return null;
+    }
+
+    function setBusy(busy) {
+      document.querySelectorAll('button').forEach((button) => {
+        button.disabled = busy;
+      });
+    }
+
+    function setLog(value) {
+      logOutput.textContent = value;
+    }
+
+    function setStatusBadge(ok, text) {
+      if (!statusBadge) return;
+      statusBadge.textContent = text;
+      statusBadge.className = ok ? 'badge' : 'badge error';
+    }
+
+    function focusProviderRow(providerId) {
+      const row = providerTable.querySelector(`[data-provider-row="${providerId}"]`);
+      if (!row) return;
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      row.classList.remove('flash-row');
+      void row.offsetWidth;
+      row.classList.add('flash-row');
+      window.setTimeout(() => row.classList.remove('flash-row'), 1800);
+    }
+
+    function formatDateTime(value) {
+      const ts = Number(value || 0);
+      if (!ts) return '-';
+      return new Date(ts * 1000).toLocaleString('zh-CN', { hour12: false });
+    }
+
+    function formatRelativeTime(value) {
+      const ts = Number(value || 0);
+      if (!ts) return '-';
+      const diff = Math.max(0, Math.floor(Date.now() / 1000 - ts));
+      if (diff < 60) return `${diff} 秒前`;
+      if (diff < 3600) return `${Math.floor(diff / 60)} 分钟前`;
+      if (diff < 86400) return `${Math.floor(diff / 3600)} 小时前`;
+      return `${Math.floor(diff / 86400)} 天前`;
+    }
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, (char) => {
+        if (char === '&') return '&amp;';
+        if (char === '<') return '&lt;';
+        if (char === '>') return '&gt;';
+        if (char === '"') return '&quot;';
+        return '&#39;';
+      });
+    }
+
+    function copyTextToClipboard(value) {
+      const text = String(value || '');
+      if (!text) return Promise.reject(new Error('没有可复制的内容。'));
+      if (navigator.clipboard?.writeText) {
+        return navigator.clipboard.writeText(text);
+      }
+      const input = document.createElement('textarea');
+      input.value = text;
+      input.setAttribute('readonly', 'readonly');
+      input.style.position = 'fixed';
+      input.style.opacity = '0';
+      document.body.appendChild(input);
+      input.select();
+      try {
+        document.execCommand('copy');
+      } finally {
+        document.body.removeChild(input);
+      }
+      return Promise.resolve();
+    }
+    function openProviderModal(mode = 'create') {
+      providerModalTitle.textContent = mode === 'edit' ? '编辑 Provider' : '新增 Provider';
+      deleteProviderBtn.classList.toggle('hidden', mode !== 'edit');
+      providerModalBackdrop.classList.remove('hidden');
+    }
+
+    function closeProviderModal() {
+      providerModalBackdrop.classList.add('hidden');
+    }
+
+    function openProviderRefreshDiffModal() {
+      providerRefreshDiffModalBackdrop.classList.remove('hidden');
+    }
+
+    function closeProviderRefreshDiffModal() {
+      providerRefreshDiffModalBackdrop.classList.add('hidden');
+    }
+
+    function buildProviderRefreshDiffTags(diff) {
+      const tags = [];
+      if ((diff?.added_models || []).length) tags.push(`新增模型 ${diff.added_models.length}`);
+      if ((diff?.removed_models || []).length) tags.push(`移除模型 ${diff.removed_models.length}`);
+      if ((diff?.api_changed_models || []).length) tags.push(`API 变更 ${diff.api_changed_models.length}`);
+      if ((diff?.before_base_url || '') !== (diff?.after_base_url || '')) tags.push('Site 已修正');
+      if (diff?.before_enabled !== diff?.after_enabled) tags.push(`状态 ${diff.before_enabled ? '启用' : '禁用'} → ${diff.after_enabled ? '启用' : '禁用'}`);
+      const refreshInfo = (providerRefreshDiffState?.refreshed || []).find((item) => item.provider === diff?.provider) || {};
+      if (refreshInfo.probe_skipped_reason) tags.push('已跳过刷新');
+      if (refreshInfo.kept_previous_due_to_transient_errors) tags.push('沿用旧配置');
+      if (Number(refreshInfo.reported_out_of_catalog_count || 0) > 0) tags.push(`库外模型 ${refreshInfo.reported_out_of_catalog_count}`);
+      return tags;
+    }
+
+    function formatProviderRefreshProbeLine(refreshInfo) {
+      const probed = Number(refreshInfo?.available_count || 0);
+      const tested = Number(refreshInfo?.tested_count || 0);
+      const preserved = Number(refreshInfo?.preserved_available_count || 0);
+      const parts = [`本次探测可用 ${probed} 个`, `探测 ${tested} 个`];
+      if (refreshInfo?.skipped_not_listed_count) {
+        parts.push(`跳过 ${Number(refreshInfo.skipped_not_listed_count)} 个未出现在 /models 的模型`);
+      }
+      if (preserved > 0) {
+        parts.push(`保留旧配置 ${preserved} 个`);
+      }
+      return parts.join(' / ');
+    }
+
+    function summarizeDiffItems(items, mapper, limit = 20) {
+      const list = Array.isArray(items) ? items : [];
+      if (!list.length) return '';
+      const mapped = list.map(mapper).filter(Boolean);
+      if (mapped.length <= limit) return mapped.join('，');
+      return `${mapped.slice(0, limit).join('，')} 等 ${mapped.length} 项`;
+    }
+
+    function renderProviderRefreshDiff(result) {
+      providerRefreshDiffState = result || null;
+      providerRefreshDiffSummary.innerHTML = '';
+      providerRefreshDiffList.innerHTML = '';
+      try {
+        const diffs = providerRefreshDiffState?.diffs || [];
+        const impactedAgents = providerRefreshDiffState?.impacted_agents || [];
+
+        const summaryItems = [
+          ['已刷新 Provider', String(providerRefreshDiffState?.tested_provider_count || 0)],
+          ['发生变化', String(diffs.filter((item) => item.changed).length)],
+          ['可用模型总数', String(providerRefreshDiffState?.total_available_models || 0)],
+          ['保留旧配置', String(providerRefreshDiffState?.total_preserved_models || 0)],
+          ['禁用 Provider', String((providerRefreshDiffState?.disabled_provider_ids || []).length)],
+        ];
+        summaryItems.forEach(([label, value]) => {
+          const card = document.createElement('div');
+          card.className = 'diff-summary-card';
+          card.innerHTML = `<span class="k">${escapeHtml(label)}</span><span class="v">${escapeHtml(value)}</span>`;
+          providerRefreshDiffSummary.appendChild(card);
+        });
+
+        if (impactedAgents.length) {
+          const card = document.createElement('div');
+          card.className = 'diff-summary-card';
+          card.innerHTML = `<span class="k">受影响 Agent</span><span class="v">${escapeHtml(summarizeDiffItems(impactedAgents, (item) => item.id, 10))}</span>`;
+          providerRefreshDiffSummary.appendChild(card);
+        }
+
+        if (!diffs.length) {
+          providerRefreshDiffList.innerHTML = '<div class="hint">本次没有返回差异数据。</div>';
+          return;
+        }
+
+        diffs.forEach((diff) => {
+          const refreshInfo = (providerRefreshDiffState?.refreshed || []).find((item) => item.provider === diff.provider) || {};
+          const card = document.createElement('div');
+          card.className = `diff-provider-card${diff.changed ? ' changed' : ''}`;
+          const tags = buildProviderRefreshDiffTags(diff);
+          const impacted = impactedAgents.find((item) => (item.removed_provider_ids || []).includes(diff.provider));
+          const noConfirmedModels = !refreshInfo.kept_previous_due_to_transient_errors && Number(refreshInfo.available_count || 0) === 0;
+          const catalogMismatchOnly = noConfirmedModels
+            && Number(refreshInfo.reported_model_count || 0) > 0
+            && Number(refreshInfo.reported_out_of_catalog_count || 0) === Number(refreshInfo.reported_model_count || 0);
+          card.innerHTML = `
+            <div class="diff-provider-head">
+              <div class="diff-provider-title">${escapeHtml(diff.provider || '-')}</div>
+              <span class="home-chip">${diff.changed ? '已变化' : '无变化'}</span>
+            </div>
+            <div class="diff-provider-lines">
+              <div><strong>Site：</strong>${escapeHtml(diff.before_base_url || '-') } → ${escapeHtml(diff.after_base_url || '-')}</div>
+              <div><strong>默认 API：</strong>${escapeHtml(diff.before_default_api || '-') } → ${escapeHtml(diff.after_default_api || '-')}</div>
+              <div><strong>默认模型：</strong>${escapeHtml(diff.before_default_model_id || '-')} → ${escapeHtml(diff.after_default_model_id || '-')}</div>
+              <div><strong>模型数：</strong>${escapeHtml(String(diff.before_model_count || 0))} → ${escapeHtml(String(diff.after_model_count || 0))}</div>
+              <div><strong>探测结果：</strong>${escapeHtml(formatProviderRefreshProbeLine(refreshInfo))}</div>
+              ${refreshInfo.reported_model_count ? `<div><strong>Provider 上报模型：</strong>${escapeHtml(String(refreshInfo.reported_model_count))} 个${refreshInfo.reported_out_of_catalog_count ? ` / 其中 ${escapeHtml(String(refreshInfo.reported_out_of_catalog_count))} 个不在模型库` : ''}</div>` : ''}
+              ${(refreshInfo.reported_out_of_catalog_sample || []).length ? `<div><strong>库外模型样例：</strong>${escapeHtml(summarizeDiffItems(refreshInfo.reported_out_of_catalog_sample || [], (item) => item, 8))}</div>` : ''}
+              ${refreshInfo.probe_skipped_reason ? `<div><strong>跳过原因：</strong>${escapeHtml(refreshInfo.probe_skipped_message || refreshInfo.probe_skipped_reason)}</div>` : ''}
+              ${refreshInfo.kept_previous_due_to_transient_errors ? `<div><strong>结果处理：</strong>本次探测未确认任何真实可用模型；因返回均为瞬时错误或站点级异常，暂时保留旧配置 ${escapeHtml(String(refreshInfo.preserved_available_count || 0))} 个，避免误清空。</div>` : ''}
+              ${catalogMismatchOnly ? '<div><strong>结果处理：</strong>Provider 上报模型全部不在当前模型库中，已按 0 可用处理；当前 Provider 已禁用。</div>' : ''}
+              ${noConfirmedModels && !catalogMismatchOnly ? '<div><strong>结果处理：</strong>本次探测未确认任何真实可用模型，已按 0 可用处理；当前 Provider 已禁用。</div>' : ''}
+              ${(refreshInfo.probe_error_summary || []).length ? `<div><strong>主要错误：</strong>${escapeHtml(summarizeDiffItems(refreshInfo.probe_error_summary || [], (item) => item, 5))}</div>` : ''}
+              ${refreshInfo.list_models_error ? `<div><strong>/models 错误：</strong>${escapeHtml(refreshInfo.list_models_error)}</div>` : ''}
+              ${refreshInfo.base_url_retry_used ? '<div><strong>Site 兜底：</strong>已触发标准尾缀重试</div>' : ''}
+              ${impacted ? `<div><strong>Agent 解绑：</strong>${escapeHtml(impacted.id)} · 移除 ${escapeHtml(summarizeDiffItems(impacted.removed_provider_ids || [], (item) => item, 10) || diff.provider)}</div>` : ''}
+              ${(diff.api_changed_models || []).length ? `<div><strong>API 变更模型：</strong>${escapeHtml(summarizeDiffItems(diff.api_changed_models, (item) => `${item.id} (${item.before_api || '-'} → ${item.after_api || '-'})`))}</div>` : ''}
+              ${(diff.route_changed_models || []).length ? `<div><strong>路由变更模型：</strong>${escapeHtml(summarizeDiffItems(diff.route_changed_models, (item) => `${item.id} (${item.before_route_suffix || '-'} → ${item.after_route_suffix || '-'})`))}</div>` : ''}
+              ${(diff.added_models || []).length ? `<div><strong>新增模型：</strong>${escapeHtml(summarizeDiffItems(diff.added_models, (item) => item))}</div>` : ''}
+              ${(diff.removed_models || []).length ? `<div><strong>移除模型：</strong>${escapeHtml(summarizeDiffItems(diff.removed_models, (item) => item))}</div>` : ''}
+            </div>
+            ${tags.length ? `<div class="diff-provider-tags">${tags.map((tag) => `<span class="diff-tag">${escapeHtml(tag)}</span>`).join('')}</div>` : ''}
+          `;
+          providerRefreshDiffList.appendChild(card);
+        });
+      } catch (error) {
+        providerRefreshDiffSummary.innerHTML = '<div class="diff-summary-card"><span class="k">状态</span><span class="v">Diff 渲染失败，已降级展示原始结果</span></div>';
+        providerRefreshDiffList.innerHTML = `<pre>${escapeHtml(JSON.stringify(result || {}, null, 2))}</pre>`;
+      }
+    }
+
+    function openCcswitchImportModal() {
+      renderCcswitchImportPreview();
+      ccswitchImportModalBackdrop.classList.remove('hidden');
+    }
+
+    function closeCcswitchImportModal() {
+      ccswitchImportModalBackdrop.classList.add('hidden');
+    }
+
+    function openAgentModal(mode = 'create') {
+      agentModalTitle.textContent = mode === 'edit' ? '编辑 Agent' : '新增 Agent';
+      deleteAgentBtn.classList.toggle('hidden', mode !== 'edit');
+      agentModalBackdrop.classList.remove('hidden');
+    }
+
+    function closeAgentModal() {
+      agentModalBackdrop.classList.add('hidden');
+    }
+
+    function openChannelModal(mode = 'create') {
+      channelModalTitle.textContent = mode === 'edit' ? '编辑 Channel' : '新增 Channel';
+      deleteChannelBtn.classList.toggle('hidden', mode !== 'edit');
+      channelModalBackdrop.classList.remove('hidden');
+    }
+
+    function closeChannelModal() {
+      channelModalBackdrop.classList.add('hidden');
+    }
+
+    function parseLines(text, transform) {
+      return text
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line && !line.startsWith('#'))
+        .map(transform);
+    }
+
+    function parseModelsText(text) {
+      return parseLines(text, (line) => {
+        const parts = line.split('|').map((part) => part.trim()).filter(Boolean);
+        const id = parts[0] || '';
+        const extraParts = parts.slice(1);
+        const lowered = extraParts.map((part) => part.toLowerCase());
+        const hasKnownFlag = lowered.some((part) => ['star', 'start', 'disabled', 'disable', 'off', 'enabled', 'enable', 'on'].includes(part));
+        const starred = lowered.some((part) => ['star', 'start'].includes(part));
+        const enabled = !lowered.some((part) => ['disabled', 'disable', 'off'].includes(part));
+        let name = id;
+        if (extraParts.length) {
+          if (!hasKnownFlag && extraParts.length === 1) {
+            name = extraParts[0] || id;
+          } else {
+            const namePart = extraParts.find((part) => !['star', 'start', 'disabled', 'disable', 'off', 'enabled', 'enable', 'on'].includes(part.toLowerCase()));
+            if (namePart) name = namePart;
+          }
+        }
+        return { id, name: name || id, starred, enabled };
+      });
+    }
+
+    function buildModelsText(models) {
+      return (models || []).map((item) => {
+        if (!item || !item.id) return '';
+        const parts = [item.id];
+        if (item.name && item.name !== item.id) parts.push(item.name);
+        if (item.starred) parts.push('star');
+        if (item.enabled === false) parts.push('disabled');
+        return parts.join(' | ');
+      }).filter(Boolean).join('\n');
+    }
+
+    function defaultWorkspaceForAgent(agentId) {
+      const cleanId = String(agentId || '').trim();
+      if (!cleanId) return '';
+      if (cleanId === 'main') return '/root/.openclaw/workspace';
+      return `/root/.openclaw/workspace/agents/${cleanId}`;
+    }
+
+    function isValidMachineId(value) {
+      return /^[a-z_]+$/.test(String(value || '').trim());
+    }
+
+    function inferApiType(modelId) {
+      const value = String(modelId || '').trim().toLowerCase();
+      if (!value) return 'openai-completions';
+      if (value.startsWith('claude') || value.startsWith('anthropic/') || value.includes('claude-')) return 'anthropic-messages';
+      if (value.startsWith('gemini') || value.startsWith('models/gemini') || value.startsWith('google/')) return 'google-generative-ai';
+      if (value.startsWith('ollama/')) return 'ollama';
+      if (/:([a-z0-9._-]+)$/.test(value) && /(llama|qwen|mistral|gemma|deepseek|phi|yi|mixtral)/.test(value)) return 'ollama';
+      return 'openai-completions';
+    }
+
+    function normalizeRouteSuffix(value) {
+      let route = String(value || '').trim();
+      if (!route) return '';
+      if (!route.startsWith('/')) route = `/${route}`;
+      route = route.replace(/\/{2,}/g, '/');
+      return route === '/' ? route : route.replace(/\/$/, '');
+    }
+
+    function defaultRouteSuffixForApi(apiType) {
+      const matched = PROVIDER_MODEL_ROUTE_CANDIDATES.find((item) => item.api === String(apiType || '').trim() && item.runtime_supported);
+      return matched ? normalizeRouteSuffix(matched.route_suffix) : '';
+    }
+
+    function defaultRouteSuffixForModel(modelId) {
+      return defaultRouteSuffixForApi(inferApiType(modelId));
+    }
+
+    function routeCandidatesForModel(modelId, preferredApi = '') {
+      const targetApi = String(preferredApi || '').trim() || inferApiType(modelId);
+      const ordered = [];
+      PROVIDER_MODEL_ROUTE_CANDIDATES
+        .filter((item) => item.api === targetApi)
+        .forEach((item) => ordered.push({ ...item, route_suffix: normalizeRouteSuffix(item.route_suffix) }));
+      PROVIDER_MODEL_ROUTE_CANDIDATES
+        .filter((item) => item.api !== targetApi)
+        .forEach((item) => {
+          const normalized = { ...item, route_suffix: normalizeRouteSuffix(item.route_suffix) };
+          if (!ordered.some((entry) => entry.api === normalized.api && entry.route_suffix === normalized.route_suffix)) {
+            ordered.push(normalized);
+          }
+        });
+      return ordered;
+    }
+
+    function normalizeModelEntry(item) {
+      if (!item?.id) return null;
+      return {
+        id: item.id.trim(),
+        name: (item.name || item.id).trim(),
+        suggested_api: (item.suggested_api || item.suggestedApi || '').trim() || inferApiType(item.id),
+        starred: Boolean(item.starred || item.favorite || item.favourite || item.is_starred),
+        enabled: item.enabled !== false && !item.disabled,
+      };
+    }
+
+    function normalizeProviderModelEntry(item) {
+      if (!item?.id) return null;
+      return {
+        id: item.id.trim(),
+        name: (item.name || item.id).trim(),
+        api: (item.api || '').trim(),
+        route_suffix: normalizeRouteSuffix(item.route_suffix || item.routeSuffix || ''),
+        enabled: item.enabled !== false,
+      };
+    }
+
+    function getCatalogMap() {
+      return new Map((storeState.modelCatalog || []).map((item) => [item.id, normalizeModelEntry(item)]));
+    }
+
+    function getStarredCatalogMap() {
+      return new Map(
+        (storeState.modelCatalog || [])
+          .map((item) => normalizeModelEntry(item))
+          .filter((item) => item?.starred && item.enabled !== false)
+          .map((item) => [item.id, item])
+      );
+    }
+
+    function providerStarredModels(record) {
+      const starredCatalogMap = getStarredCatalogMap();
+      return enabledProviderModels(record).filter((item) => starredCatalogMap.has(item.id));
+    }
+
+    function providerModelsFromRecord(record) {
+      const catalogMap = getCatalogMap();
+      const normalized = [];
+      const seen = new Set();
+      const sourceModels = Array.isArray(record?.models) ? record.models : [];
+      const pushModel = (item) => {
+        const normalizedItem = normalizeProviderModelEntry(item);
+        if (!normalizedItem || seen.has(normalizedItem.id)) return;
+        const catalogItem = catalogMap.get(normalizedItem.id);
+        normalized.push({
+          id: normalizedItem.id,
+          name: catalogItem?.name || normalizedItem.name || normalizedItem.id,
+          api: normalizedItem.api || '',
+          route_suffix: normalizedItem.route_suffix || '',
+          enabled: normalizedItem.enabled !== false,
+        });
+        seen.add(normalizedItem.id);
+      };
+      sourceModels.forEach(pushModel);
+      if (!normalized.length && Array.isArray(record?.model_ids)) {
+        record.model_ids.forEach((modelId) => {
+          const cleanId = String(modelId || '').trim();
+          if (!cleanId || seen.has(cleanId)) return;
+          const catalogItem = catalogMap.get(cleanId);
+          normalized.push({
+            id: cleanId,
+            name: catalogItem?.name || cleanId,
+            api: '',
+            route_suffix: defaultRouteSuffixForModel(cleanId),
+            enabled: true,
+          });
+          seen.add(cleanId);
+        });
+      }
+      return normalized;
+    }
+
+    function enabledProviderModels(record) {
+      return providerModelsFromRecord(record).filter((item) => item.enabled !== false);
+    }
+
+    function resolveRecordDefaultApi(record) {
+      const defaultModelId = String(record?.default_model_id || '').trim();
+      const defaultModel = providerModelsFromRecord(record).find((item) => item.id === defaultModelId);
+      return String(defaultModel?.api || record?.default_api || record?.api || (defaultModelId ? inferApiType(defaultModelId) : '')).trim();
+    }
+
+    function resolveProviderModelApi(item, defaultApi = '') {
+      const modelId = String(item?.id || '').trim();
+      return String(item?.api || defaultApi || (modelId ? inferApiType(modelId) : '') || '').trim();
+    }
+
+    function resolveProviderModelRoute(item, defaultApi = '') {
+      return normalizeRouteSuffix(item?.route_suffix || item?.routeSuffix || '') || defaultRouteSuffixForApi(resolveProviderModelApi(item, defaultApi));
+    }
+
+    function providerApiSummary(record) {
+      const defaultApi = resolveRecordDefaultApi(record);
+      const apis = Array.from(new Set(
+        enabledProviderModels(record)
+          .map((item) => resolveProviderModelApi(item, defaultApi))
+          .filter(Boolean)
+      ));
+      if (!apis.length) return '未设置';
+      if (apis.length === 1) return apis[0];
+      return `混合协议 (${apis.length})`;
+    }
+
+    function providerApiSummaryTitle(record) {
+      const defaultApi = resolveRecordDefaultApi(record);
+      const apis = Array.from(new Set(
+        enabledProviderModels(record)
+          .map((item) => resolveProviderModelApi(item, defaultApi))
+          .filter(Boolean)
+      ));
+      if (!apis.length) return '未设置';
+      return apis.join('，');
+    }
+
+    function providerRecordPayload(providerId, record, overrides = {}) {
+      const models = enabledProviderModels(record).map((item) => ({
+        id: item.id,
+        name: item.name || item.id,
+        api: item.api || '',
+        route_suffix: resolveProviderModelRoute(item),
+        enabled: true,
+      }));
+      const defaultApi = resolveRecordDefaultApi({ ...(record || {}), ...(overrides || {}) });
+      return {
+        original_name: providerId || overrides.original_name || '',
+        provider: providerId || record?.provider || '',
+        site: overrides.site ?? overrides.base_url ?? record?.site ?? record?.base_url ?? '',
+        base_url: overrides.site ?? overrides.base_url ?? record?.site ?? record?.base_url ?? '',
+        default_api: defaultApi,
+        api: defaultApi,
+        api_keys: Array.isArray(overrides.api_keys) ? overrides.api_keys : (record?.api_keys || []),
+        models,
+        default_model_id: overrides.default_model_id ?? record?.default_model_id ?? '',
+        enabled: overrides.enabled ?? (record?.enabled !== false),
+      };
+    }
+
+    function filteredProviderEntries() {
+      const keyword = providerSearchInput.value.trim().toLowerCase();
+      const providerOrder = storeState.providerOrder || Object.keys(storeState.providers || {});
+      return providerOrder
+        .map((providerId) => [providerId, (storeState.providers || {})[providerId]])
+        .filter(([, record]) => {
+          if (!record) return false;
+          if (!keyword) return true;
+          const models = enabledProviderModels(record);
+          const haystack = [
+            record?.site || record?.base_url || '',
+            resolveRecordDefaultApi(record),
+            ...models.map((item) => item.id),
+            ...models.map((item) => item.api || ''),
+            ...models.map((item) => resolveProviderModelRoute(item)),
+            record?.default_model_id || '',
+          ].join(' ').toLowerCase();
+          return haystack.includes(keyword);
+        });
+    }
+
+    function selectedProviderIds() {
+      return Array.from(selectedProviderIdsState).filter((providerId) => Boolean((storeState.providers || {})[providerId]));
+    }
+
+    function syncSelectedProviderIds() {
+      selectedProviderIdsState = new Set(selectedProviderIds());
+    }
+
+    function updateRefreshProviderModelsBtn() {
+      const count = selectedProviderIds().length;
+      refreshProviderModelsBtn.disabled = !count;
+      refreshProviderModelsBtn.textContent = count ? `一键刷新可用模型（${count}）` : '一键刷新可用模型';
+    }
+
+    function updateProviderSelectAllState(entries = filteredProviderEntries()) {
+      const visibleIds = entries.map(([providerId]) => providerId);
+      const checkedCount = visibleIds.filter((providerId) => selectedProviderIdsState.has(providerId)).length;
+      providerSelectAll.checked = Boolean(visibleIds.length) && checkedCount === visibleIds.length;
+      providerSelectAll.indeterminate = checkedCount > 0 && checkedCount < visibleIds.length;
+    }
+
+    function buildApiOptionsHtml(selectedValue = '', blankLabel = '继承默认') {
+      const seen = new Set();
+      const options = ['', ...API_TYPE_OPTIONS, selectedValue].map((value) => ({
+        value: String(value || '').trim(),
+        label: String(value || '').trim() || blankLabel,
+      })).filter((option) => {
+        if (seen.has(option.value)) return false;
+        seen.add(option.value);
+        return true;
+      });
+      return options.map((option) => `
+        <option value="${escapeHtml(option.value)}"${option.value === selectedValue ? ' selected' : ''}>${escapeHtml(option.label)}</option>
+      `).join('');
+    }
+
+    function buildRouteOptionsHtml(modelId, selectedApi = '', selectedRoute = '') {
+      const normalizedRoute = normalizeRouteSuffix(selectedRoute);
+      const seen = new Set();
+      const options = [];
+      routeCandidatesForModel(modelId, selectedApi).forEach((item) => {
+        const value = normalizeRouteSuffix(item.route_suffix);
+        if (!value || seen.has(value)) return;
+        seen.add(value);
+        options.push({
+          value,
+          label: `${value}${item.runtime_supported ? '' : ' · 仅探测'}`,
+        });
+      });
+      if (normalizedRoute && !seen.has(normalizedRoute)) {
+        options.unshift({
+          value: normalizedRoute,
+          label: `${normalizedRoute} · 自定义`,
+        });
+      }
+      return options.map((option) => `
+        <option value="${escapeHtml(option.value)}"${option.value === normalizedRoute ? ' selected' : ''}>${escapeHtml(option.label)}</option>
+      `).join('');
+    }
+
+    function buildProviderModelDraft(record = null) {
+      const catalog = (storeState.modelCatalog || []).map(normalizeModelEntry).filter((item) => item && item.enabled !== false);
+      const recordModels = new Map(providerModelsFromRecord(record).map((item) => [item.id, item]));
+      const draft = catalog.map((item) => {
+        const saved = recordModels.get(item.id);
+        const resolvedApi = saved?.api || '';
+        return {
+          id: item.id,
+          name: item.name || item.id,
+          suggested_api: item.suggested_api || inferApiType(item.id),
+          api: resolvedApi,
+          route_suffix: normalizeRouteSuffix(saved?.route_suffix || saved?.routeSuffix || '') || defaultRouteSuffixForApi(resolvedApi || item.suggested_api || inferApiType(item.id)),
+          enabled: Boolean(saved?.enabled),
+        };
+      });
+      recordModels.forEach((saved, modelId) => {
+        if (draft.some((item) => item.id === modelId)) return;
+        const resolvedApi = saved?.api || '';
+        draft.push({
+          id: modelId,
+          name: saved?.name || modelId,
+          suggested_api: inferApiType(modelId),
+          api: resolvedApi,
+          route_suffix: normalizeRouteSuffix(saved?.route_suffix || saved?.routeSuffix || '') || defaultRouteSuffixForApi(resolvedApi || inferApiType(modelId)),
+          enabled: saved?.enabled !== false,
+        });
+      });
+      providerModelDraft = draft;
+    }
+
+    function syncDefaultModelOptions(preferredId = '') {
+      const catalogMap = getCatalogMap();
+      const selectedIds = providerModelDraft.filter((item) => item.enabled).map((item) => item.id);
+      defaultModelIdSelect.innerHTML = '';
+      if (!selectedIds.length) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = '请先启用模型';
+        defaultModelIdSelect.appendChild(option);
+        return;
+      }
+      selectedIds.forEach((modelId) => {
+        const option = document.createElement('option');
+        option.value = modelId;
+        const item = catalogMap.get(modelId);
+        option.textContent = `${modelId}${item?.name && item.name !== modelId ? ` · ${item.name}` : ''}`;
+        defaultModelIdSelect.appendChild(option);
+      });
+      defaultModelIdSelect.value = selectedIds.includes(preferredId) ? preferredId : selectedIds[0];
+    }
+
+    function updateApiSuggestion() {
+      const enabledModels = providerModelDraft.filter((item) => item.enabled);
+      if (!enabledModels.length) {
+        apiSuggestion.textContent = '按模型单独维护 API 类型与路由后缀；Site 只填写基础网址。';
+        return;
+      }
+      const apiBuckets = new Map();
+      const routeBuckets = new Map();
+      enabledModels.forEach((item) => {
+        const resolvedApi = resolveProviderModelApi(item);
+        const resolvedRoute = resolveProviderModelRoute(item, resolvedApi);
+        apiBuckets.set(resolvedApi, (apiBuckets.get(resolvedApi) || 0) + 1);
+        routeBuckets.set(resolvedRoute, (routeBuckets.get(resolvedRoute) || 0) + 1);
+      });
+      const apiParts = Array.from(apiBuckets.entries()).map(([api, count]) => `${api} (${count})`);
+      const routeParts = Array.from(routeBuckets.entries()).map(([route, count]) => `${route} (${count})`);
+      const defaultModelId = defaultModelIdSelect.value || enabledModels[0]?.id || '';
+      const defaultModel = enabledModels.find((item) => item.id === defaultModelId);
+      const defaultApi = defaultModel ? resolveProviderModelApi(defaultModel) : '';
+      const defaultRoute = defaultModel ? resolveProviderModelRoute(defaultModel, defaultApi) : '';
+      apiSuggestion.textContent = [
+        `启用模型 ${enabledModels.length} 个。`,
+        `协议分布：${apiParts.join('，')}。`,
+        `路由分布：${routeParts.join('，')}。`,
+        defaultModelId ? `默认模型 ${defaultModelId}${defaultApi ? ` · ${defaultApi}` : ''}${defaultRoute ? ` · ${defaultRoute}` : ''}。` : '',
+      ].filter(Boolean).join(' ');
+    }
+
+    function updateProviderModelSelectionToolbar() {
+      const total = providerModelDraft.length;
+      const enabledCount = providerModelDraft.filter((item) => item.enabled).length;
+      providerModelSelectionSummary.textContent = `已选 ${enabledCount} / ${total}`;
+      providerModelSelectAll.disabled = total === 0;
+      providerModelInvertBtn.disabled = total === 0;
+      providerModelSelectAll.checked = total > 0 && enabledCount === total;
+      providerModelSelectAll.indeterminate = enabledCount > 0 && enabledCount < total;
+    }
+
+    function renderProviderModelEditor(preferredDefaultOverride = null) {
+      modelCheckboxes.innerHTML = '';
+      if (!providerModelDraft.length) {
+        modelCheckboxes.innerHTML = '<div class="hint">模型库还是空的，请先到“模型库”页签里维护可选模型。</div>';
+        syncDefaultModelOptions('');
+        updateApiSuggestion();
+        updateProviderModelSelectionToolbar();
+        return;
+      }
+      const preferredDefault = preferredDefaultOverride === null
+        ? (defaultModelIdSelect.value || '')
+        : String(preferredDefaultOverride || '').trim();
+      const wrapper = document.createElement('div');
+      wrapper.className = 'provider-model-table';
+      const table = document.createElement('table');
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th style="width:8%">启用</th>
+            <th style="width:34%">模型</th>
+            <th style="width:16%">推荐 API</th>
+            <th style="width:18%">模型 API</th>
+            <th style="width:24%">路由后缀</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      `;
+      const tbody = table.querySelector('tbody');
+      providerModelDraft.forEach((item) => {
+        const resolvedApi = resolveProviderModelApi(item);
+        const resolvedRoute = resolveProviderModelRoute(item, resolvedApi);
+        const row = document.createElement('tr');
+        row.className = item.enabled ? '' : 'is-disabled';
+        row.innerHTML = `
+          <td><input type="checkbox" data-provider-model-toggle="${escapeHtml(item.id)}" ${item.enabled ? 'checked' : ''}></td>
+          <td>
+            <div class="provider-model-id">
+              <strong>${escapeHtml(item.id)}</strong>
+              <span class="hint">${escapeHtml(item.name || item.id)}</span>
+            </div>
+          </td>
+          <td><span class="api-tag">${escapeHtml(item.suggested_api || inferApiType(item.id))}</span></td>
+          <td>
+            <select class="provider-model-api-select" data-provider-model-api="${escapeHtml(item.id)}" ${item.enabled ? '' : 'disabled'}>
+              ${buildApiOptionsHtml(item.api || '', '自动推荐')}
+            </select>
+          </td>
+          <td>
+            <select class="provider-model-route-select" data-provider-model-route="${escapeHtml(item.id)}" ${item.enabled ? '' : 'disabled'}>
+              ${buildRouteOptionsHtml(item.id, resolvedApi, resolvedRoute)}
+            </select>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+      wrapper.appendChild(table);
+      modelCheckboxes.appendChild(wrapper);
+      syncDefaultModelOptions(preferredDefault);
+      updateApiSuggestion();
+      updateProviderModelSelectionToolbar();
+
+      modelCheckboxes.querySelectorAll('[data-provider-model-toggle]').forEach((checkbox) => {
+        checkbox.addEventListener('change', () => {
+          const modelId = checkbox.dataset.providerModelToggle || '';
+          const target = providerModelDraft.find((item) => item.id === modelId);
+          if (!target) return;
+          target.enabled = checkbox.checked;
+          renderProviderModelEditor();
+        });
+      });
+      modelCheckboxes.querySelectorAll('[data-provider-model-api]').forEach((select) => {
+        select.addEventListener('change', () => {
+          const modelId = select.dataset.providerModelApi || '';
+          const target = providerModelDraft.find((item) => item.id === modelId);
+          if (!target) return;
+          const previousApi = resolveProviderModelApi(target);
+          const previousRoute = resolveProviderModelRoute(target, previousApi);
+          target.api = select.value.trim();
+          if (!target.route_suffix || normalizeRouteSuffix(target.route_suffix) === normalizeRouteSuffix(previousRoute)) {
+            target.route_suffix = defaultRouteSuffixForApi(resolveProviderModelApi(target));
+          }
+          renderProviderModelEditor();
+        });
+      });
+      modelCheckboxes.querySelectorAll('[data-provider-model-route]').forEach((select) => {
+        select.addEventListener('change', () => {
+          const modelId = select.dataset.providerModelRoute || '';
+          const target = providerModelDraft.find((item) => item.id === modelId);
+          if (!target) return;
+          target.route_suffix = normalizeRouteSuffix(select.value);
+          updateApiSuggestion();
+        });
+      });
+    }
+
+    function renderModelCatalogTable() {
+      const catalog = (storeState.modelCatalog || []).map(normalizeModelEntry).filter(Boolean);
+      modelCatalogTable.innerHTML = '';
+      const starredCount = catalog.filter((item) => item.starred).length;
+      const enabledCount = catalog.filter((item) => item.enabled !== false).length;
+      modelImportStatus.textContent = `当前模型库 ${catalog.length} 个模型，启用 ${enabledCount} 个，已加星 ${starredCount} 个。`;
+      if (!catalog.length) {
+        modelCatalogTable.innerHTML = '<tr><td colspan="6" class="hint">模型库为空。</td></tr>';
+        return;
+      }
+      catalog.forEach((item) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${item.id}</td>
+          <td>${item.name || item.id}</td>
+          <td><span class="api-tag">${item.suggested_api}</span></td>
+          <td>
+            <label class="switch" title="${item.enabled === false ? '已禁用' : '已启用'}">
+              <input type="checkbox" data-toggle-model-enabled="${item.id}" ${item.enabled === false ? '' : 'checked'}>
+              <span class="slider"></span>
+            </label>
+          </td>
+          <td>
+            <button
+              class="star-btn ${item.starred ? 'active' : ''}"
+              data-toggle-model-star="${item.id}"
+              title="${item.starred ? '取消星标' : '加星'}"
+            >★</button>
+          </td>
+          <td>
+            <div class="row-actions">
+              <button class="secondary tiny-btn" data-remove-model="${item.id}">删除</button>
+            </div>
+          </td>
+        `;
+        modelCatalogTable.appendChild(row);
+      });
+      modelCatalogTable.querySelectorAll('[data-toggle-model-enabled]').forEach((button) => {
+        button.addEventListener('change', async () => {
+          const modelId = button.dataset.toggleModelEnabled;
+          const nextEnabled = button.checked;
+          if (!confirmAction(`确认${nextEnabled ? '启用' : '禁用'}模型？`, modelId)) {
+            button.checked = !nextEnabled;
+            return;
+          }
+          const nextCatalog = (storeState.modelCatalog || []).map((item) => {
+            const normalized = normalizeModelEntry(item);
+            if (!normalized || normalized.id !== modelId) return normalizeModelEntry(item) || item;
+            return {
+              ...normalized,
+              enabled: nextEnabled,
+            };
+          });
+          await persistModelCatalog(nextCatalog, `已${nextEnabled ? '启用' : '禁用'}模型：${modelId}`);
+        });
+      });
+      modelCatalogTable.querySelectorAll('[data-toggle-model-star]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const modelId = button.dataset.toggleModelStar;
+          const nextCatalog = (storeState.modelCatalog || []).map((item) => {
+            const normalized = normalizeModelEntry(item);
+            if (!normalized || normalized.id !== modelId) return normalizeModelEntry(item) || item;
+            return {
+              ...normalized,
+              starred: !normalized.starred,
+            };
+          });
+          const target = nextCatalog.find((item) => item.id === modelId);
+          await persistModelCatalog(nextCatalog, `${target?.starred ? '已加星' : '已取消星标'}：${modelId}`);
+        });
+      });
+      modelCatalogTable.querySelectorAll('[data-remove-model]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const modelId = button.dataset.removeModel;
+          if (!confirmAction('确认删除模型？', modelId)) return;
+          const nextCatalog = (storeState.modelCatalog || []).filter((item) => item.id !== modelId);
+          await persistModelCatalog(nextCatalog, `已删除模型：${modelId}`);
+        });
+      });
+    }
+
+    function renderProviderTable() {
+      syncSelectedProviderIds();
+      const entries = filteredProviderEntries();
+      providerTable.innerHTML = '';
+      if (!entries.length) {
+        providerTable.innerHTML = '<tr><td colspan="8" class="hint">没有匹配的 Provider。</td></tr>';
+        updateProviderSelectAllState([]);
+        updateRefreshProviderModelsBtn();
+        return;
+      }
+      entries.forEach(([providerId, record]) => {
+        const models = enabledProviderModels(record);
+        const starredModels = providerStarredModels(record);
+        const apiSummary = providerApiSummary(record);
+        const siteValue = record.site || record.base_url || '-';
+        const starredTitle = starredModels.map((item) => item.id).join('，');
+        const row = document.createElement('tr');
+        row.dataset.providerRow = providerId;
+        row.innerHTML = `
+          <td class="selection-cell">
+            <input type="checkbox" data-select-provider="${providerId}" ${selectedProviderIdsState.has(providerId) ? 'checked' : ''}>
+          </td>
+          <td>
+            <div class="provider-site-cell">
+              <span class="provider-site-text" title="${escapeHtml(siteValue)}">${escapeHtml(siteValue)}</span>
+              ${starredModels.length ? `<span class="provider-star-badge" title="${escapeHtml(starredTitle)}">★ ${starredModels.length}</span>` : ''}
+            </div>
+          </td>
+          <td><span class="cell-ellipsis" title="${escapeHtml(providerApiSummaryTitle(record))}">${escapeHtml(apiSummary)}</span></td>
+          <td>
+            <label class="switch" title="${record.enabled === false ? '已禁用' : '已启用'}">
+              <input type="checkbox" data-toggle-provider="${providerId}" ${record.enabled === false ? '' : 'checked'}>
+              <span class="slider"></span>
+            </label>
+          </td>
+          <td>${(record.api_keys || []).length}</td>
+          <td>${models.length}</td>
+          <td><span class="cell-ellipsis" title="${record.default_model_id || '-'}">${record.default_model_id || '-'}</span></td>
+          <td>
+            <div class="row-actions">
+              <button class="secondary tiny-btn" data-edit-provider="${providerId}">编辑</button>
+              <button class="secondary tiny-btn" data-clone-provider="${providerId}">复制新增</button>
+              <button class="secondary tiny-btn" data-delete-provider="${providerId}">删除</button>
+            </div>
+          </td>
+        `;
+        providerTable.appendChild(row);
+      });
+      providerTable.querySelectorAll('[data-select-provider]').forEach((checkbox) => {
+        checkbox.addEventListener('change', () => {
+          const providerId = checkbox.dataset.selectProvider || '';
+          if (!providerId) return;
+          if (checkbox.checked) selectedProviderIdsState.add(providerId);
+          else selectedProviderIdsState.delete(providerId);
+          updateProviderSelectAllState(entries);
+          updateRefreshProviderModelsBtn();
+        });
+      });
+      providerTable.querySelectorAll('[data-toggle-provider]').forEach((button) => {
+        button.addEventListener('change', async () => {
+          const providerId = button.dataset.toggleProvider;
+          const record = storeState.providers[providerId];
+          if (!record) return;
+          const nextEnabled = button.checked;
+          if (!confirmAction(`确认${nextEnabled ? '启用' : '禁用'} Provider？`, record.site || record.base_url || providerId)) {
+            button.checked = !nextEnabled;
+            return;
+          }
+          try {
+            await request('/api/store/providers/save', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(providerRecordPayload(providerId, record, { enabled: nextEnabled })),
+            });
+            await loadStore();
+            setLog(`已${nextEnabled ? '启用' : '禁用'}：${record.site || record.base_url || providerId}`);
+          } catch (error) {
+            button.checked = !nextEnabled;
+            setStatusBadge(false, '更新启用状态失败');
+            setLog(String(error));
+          }
+        });
+      });
+      providerTable.querySelectorAll('[data-edit-provider]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const providerId = button.dataset.editProvider;
+          fillProviderForm(providerId, storeState.providers[providerId]);
+          openProviderModal('edit');
+          try {
+            await request('/api/store/providers/select', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ provider: providerId }),
+            });
+          } catch (_) {}
+        });
+      });
+      providerTable.querySelectorAll('[data-clone-provider]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const providerId = button.dataset.cloneProvider;
+          const record = storeState.providers[providerId];
+          if (!record) return;
+          fillProviderForm('', record);
+          openProviderModal('create');
+          setLog(`已载入复制模板：${record.site || record.base_url || providerId}`);
+        });
+      });
+      providerTable.querySelectorAll('[data-delete-provider]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const providerId = button.dataset.deleteProvider;
+          const providerLabel = storeState.providers[providerId]?.site || storeState.providers[providerId]?.base_url || providerId;
+          if (!confirmAction('确认删除 Provider？', providerLabel)) return;
+          await deleteProvider(providerId);
+        });
+      });
+      updateProviderSelectAllState(entries);
+      updateRefreshProviderModelsBtn();
+    }
+
+    function selectedCcswitchImportItems() {
+      return Array.from(ccswitchImportTable.querySelectorAll('input[data-ccswitch-import-item]:checked'))
+        .map((node) => node.value)
+        .filter(Boolean)
+        .map((id) => (ccswitchImportPreviewState.items || []).find((item) => item.id === id))
+        .filter(Boolean);
+    }
+
+    function renderCcswitchImportPreview() {
+      const items = ccswitchImportPreviewState.items || [];
+      const skipped = ccswitchImportPreviewState.skipped || [];
+      const summary = ccswitchImportPreviewState.summary || {};
+      const fileName = ccswitchImportPreviewState.file_name || '';
+      const statusParts = [];
+      if (fileName) statusParts.push(`文件：${fileName}`);
+      statusParts.push(`识别 ${summary.recognized || 0} 条`);
+      statusParts.push(`可导入 ${summary.importable || 0} 条`);
+      if (skipped.length) statusParts.push(`跳过 ${skipped.length} 条`);
+      ccswitchImportStatus.textContent = statusParts.join(' · ');
+      ccswitchImportTable.innerHTML = '';
+      if (!items.length) {
+        ccswitchImportTable.innerHTML = '<tr><td colspan="7" class="hint">还没有解析结果。</td></tr>';
+        applyCcswitchImportBtn.disabled = true;
+        return;
+      }
+      items.forEach((item) => {
+        const row = document.createElement('tr');
+        const warnings = (item.warnings || []).filter(Boolean);
+        const sources = (item.source_app_types || []).join('，') || '-';
+        const noteLines = [];
+        if (item.existing_provider) {
+          noteLines.push(`已存在：${item.existing_provider}`);
+        }
+        warnings.forEach((warning) => noteLines.push(warning));
+        row.innerHTML = `
+          <td>
+            <input
+              type="checkbox"
+              data-ccswitch-import-item="${item.id}"
+              value="${item.id}"
+              ${item.can_import === false ? 'disabled' : 'checked'}
+            >
+          </td>
+          <td><span class="cell-wrap" title="${escapeHtml(item.base_url || '-')}">${escapeHtml(item.base_url || '-')}</span></td>
+          <td><span class="cell-ellipsis" title="${escapeHtml(item.api || '-')}">${escapeHtml(item.api || '-')}</span></td>
+          <td><span class="cell-wrap" title="${escapeHtml((item.api_key_masks || []).join('，') || '-')}">${item.api_key_count || 0}</span></td>
+          <td><span class="cell-wrap" title="${escapeHtml(item.default_model_id || '-')}">${escapeHtml(item.default_model_id || '-')}</span></td>
+          <td><span class="cell-wrap" title="${escapeHtml(sources)}">${escapeHtml(sources)}</span></td>
+          <td><span class="cell-wrap" title="${escapeHtml(noteLines.join('；') || '-')}">${escapeHtml(noteLines.join('；') || '-')}</span></td>
+        `;
+        ccswitchImportTable.appendChild(row);
+      });
+      applyCcswitchImportBtn.disabled = !selectedCcswitchImportItems().length;
+      ccswitchImportTable.querySelectorAll('input[data-ccswitch-import-item]').forEach((checkbox) => {
+        checkbox.addEventListener('change', () => {
+          applyCcswitchImportBtn.disabled = !selectedCcswitchImportItems().length;
+        });
+      });
+    }
+
+    function enabledProviders() {
+      return (storeState.providerOrder || [])
+        .map((providerId) => ({ id: providerId, record: (storeState.providers || {})[providerId] }))
+        .filter((item) => item.record && item.record.enabled !== false);
+    }
+
+    function selectedAgentProviderIds() {
+      return Array.from(agentProviderSelection.querySelectorAll('input[type="checkbox"]:checked')).map((node) => node.value).filter(Boolean);
+    }
+
+    function selectedAgentProviderOrder() {
+      return Array.from(agentProviderOrder.querySelectorAll('[data-provider-order-id]')).map((node) => node.dataset.providerOrderId).filter(Boolean);
+    }
+
+    function selectedAgentBindings() {
+      return Array.from(agentChannelBindings.querySelectorAll('input[type="checkbox"]:checked')).map((node) => {
+        const [channel, accountId] = String(node.value || '').split(':');
+        return { channel, account_id: accountId };
+      }).filter((item) => item.channel && item.account_id);
+    }
+
+    function parseLineList(value) {
+      return String(value || '')
+        .split(/\r?\n|,/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .filter((item, index, arr) => arr.indexOf(item) === index);
+    }
+
+    function normalizeAgentProviderDraft(selectedIds = [], preferredOrder = []) {
+      const normalized = [];
+      (preferredOrder || []).forEach((providerId) => {
+        if (selectedIds.includes(providerId) && !normalized.includes(providerId)) {
+          normalized.push(providerId);
+        }
+      });
+      selectedIds.forEach((providerId) => {
+        if (!normalized.includes(providerId)) {
+          normalized.push(providerId);
+        }
+      });
+      return normalized;
+    }
+
+    function renderAgentProviderSelector(selectedIds = [], preferredOrder = []) {
+      const providers = enabledProviders();
+      agentProviderSelection.innerHTML = '';
+      if (!providers.length) {
+        agentProviderSelection.innerHTML = '<div class="hint">请先到“Provider 管理”里启用至少一个 Provider。</div>';
+        agentProviderDraftOrder = [];
+        renderAgentProviderOrder([]);
+        return;
+      }
+      const selected = new Set(selectedIds);
+      providers.forEach(({ id, record }) => {
+        const label = document.createElement('label');
+        label.className = 'checkbox-item';
+        label.innerHTML = `
+          <input type="checkbox" value="${id}" ${selected.has(id) ? 'checked' : ''}>
+          <span>${id}<br><span class="hint">${record?.site || record?.base_url || '-'}</span></span>
+        `;
+        const checkbox = label.querySelector('input');
+        checkbox.addEventListener('change', () => {
+          agentProviderDraftOrder = normalizeAgentProviderDraft(selectedAgentProviderIds(), agentProviderDraftOrder);
+          renderAgentProviderOrder(agentProviderDraftOrder);
+        });
+        agentProviderSelection.appendChild(label);
+      });
+      agentProviderDraftOrder = normalizeAgentProviderDraft(selectedIds, preferredOrder);
+      renderAgentProviderOrder(agentProviderDraftOrder);
+    }
+
+    function renderAgentProviderOrder(providerOrder = []) {
+      const providers = enabledProviders();
+      agentProviderOrder.innerHTML = '';
+      if (!providers.length) {
+        agentProviderOrder.innerHTML = '<div class="hint">请先到“Provider 管理”里启用至少一个 Provider。</div>';
+        return;
+      }
+      const selectedIds = selectedAgentProviderIds();
+      const orderedIds = normalizeAgentProviderDraft(selectedIds, providerOrder);
+      agentProviderDraftOrder = orderedIds;
+      if (!orderedIds.length) {
+        agentProviderOrder.innerHTML = '<div class="hint">请先勾选至少一个 Provider，再调整顺序。</div>';
+        return;
+      }
+      const list = document.createElement('div');
+      list.className = 'provider-order-list';
+      agentProviderOrder.appendChild(list);
+      orderedIds.forEach((providerId, index) => {
+        const record = (storeState.providers || {})[providerId];
+        const row = document.createElement('div');
+        row.className = 'provider-order-item';
+        row.dataset.providerOrderId = providerId;
+        row.innerHTML = `
+          <span class="provider-order-rank">${index === 0 ? '主用' : `#${index + 1}`}</span>
+          <span class="drag-handle" draggable="true" data-agent-provider-drag="${providerId}" title="拖拽排序"><span class="drag-hint">⋮⋮</span></span>
+          <span class="provider-order-label">
+            <span>${providerId}</span>
+            <span class="hint">${record?.site || record?.base_url || '-'}</span>
+          </span>
+        `;
+        list.appendChild(row);
+      });
+
+      let draggedProviderId = '';
+      list.querySelectorAll('[data-agent-provider-drag]').forEach((handle) => {
+        handle.addEventListener('dragstart', (event) => {
+          draggedProviderId = handle.dataset.agentProviderDrag || '';
+          handle.closest('.provider-order-item')?.classList.add('dragging');
+          event.dataTransfer.effectAllowed = 'move';
+          event.dataTransfer.setData('text/plain', draggedProviderId);
+        });
+        handle.addEventListener('dragend', () => {
+          list.querySelectorAll('.provider-order-item').forEach((item) => item.classList.remove('dragging', 'drag-over'));
+          draggedProviderId = '';
+        });
+      });
+      list.querySelectorAll('.provider-order-item').forEach((row) => {
+        row.addEventListener('dragover', (event) => {
+          event.preventDefault();
+          if (!draggedProviderId || draggedProviderId === row.dataset.providerOrderId) return;
+          list.querySelectorAll('.provider-order-item').forEach((item) => item.classList.remove('drag-over'));
+          row.classList.add('drag-over');
+        });
+        row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+        row.addEventListener('drop', (event) => {
+          event.preventDefault();
+          row.classList.remove('drag-over');
+          const targetProviderId = row.dataset.providerOrderId || '';
+          if (!draggedProviderId || !targetProviderId || draggedProviderId === targetProviderId) return;
+          const nextOrder = [...orderedIds];
+          const draggedIndex = nextOrder.indexOf(draggedProviderId);
+          const targetIndex = nextOrder.indexOf(targetProviderId);
+          if (draggedIndex < 0 || targetIndex < 0) return;
+          nextOrder.splice(draggedIndex, 1);
+          nextOrder.splice(targetIndex, 0, draggedProviderId);
+          agentProviderDraftOrder = nextOrder;
+          renderAgentProviderOrder(nextOrder);
+        });
+      });
+      list.addEventListener('dragstart', (event) => {
+        if (!getClosestElement(event.target, '[data-agent-provider-drag]')) {
+          event.preventDefault();
+        }
+      }, true);
+    }
+
+    function renderAgentChannelOptions(bindings = []) {
+      const selected = new Set((bindings || []).map((item) => `${item.channel}:${item.account_id}`));
+      agentChannelBindings.innerHTML = '';
+      const channels = (storeState.channelCatalog || []).filter((item) => {
+        const owner = item.bound_agent_id || '';
+        return !owner || owner === currentAgentKey;
+      });
+      if (!channels.length) {
+        agentChannelBindings.innerHTML = '<div class="hint">当前没有可选 Channel 账户。</div>';
+        return;
+      }
+      channels.forEach((item) => {
+        const bindingKey = `${item.channel}:${item.account_id}`;
+        const label = document.createElement('label');
+        label.className = 'checkbox-item';
+        label.innerHTML = `
+          <input type="checkbox" value="${bindingKey}" ${selected.has(bindingKey) ? 'checked' : ''}>
+          <span>${item.channel}/${item.account_id}<br><span class="hint">${item.name || item.account_id}${item.enabled === false ? ' · 已禁用' : ''}${item.bound_agent_id ? ` · 当前归属 ${item.bound_agent_id}` : ''}</span></span>
+        `;
+        agentChannelBindings.appendChild(label);
+      });
+    }
+
+    function channelPlatformLabel(platform) {
+      return {
+        qqbot: 'QQ',
+        wecom: '企微',
+        ddingtalk: '钉钉',
+        feishu: '飞书',
+      }[platform] || platform || '-';
+    }
+
+    function channelTypeLabel(configType) {
+      return {
+        qqbot: 'QQ Bot',
+        ddingtalk: '单应用',
+        'wecom-agent': '企微自建应用',
+        'wecom-bot-webhook': '企微机器人 · Webhook',
+        'wecom-bot-websocket': '企微机器人 · WebSocket',
+        'feishu-websocket': '飞书 · WebSocket',
+        'feishu-webhook': '飞书 · Webhook',
+      }[configType] || configType || '-';
+    }
+
+    function currentChannelKey() {
+      return currentChannelPlatform && currentChannelAccountId ? `${currentChannelPlatform}:${currentChannelAccountId}` : '';
+    }
+
+    function getChannelRecord(platform, accountId) {
+      return (storeState.channelCatalog || []).find((item) => item.channel === platform && item.account_id === accountId) || null;
+    }
+
+    function updateChannelFormSections() {
+      const platform = channelPlatformInput.value;
+      const wecomMode = wecomModeInput.value;
+      const feishuConnectionMode = feishuConnectionModeInput.value;
+
+      document.getElementById('channelSectionQqbot').classList.toggle('hidden', platform !== 'qqbot');
+      document.getElementById('channelSectionDingtalk').classList.toggle('hidden', platform !== 'ddingtalk');
+      document.getElementById('channelSectionWecom').classList.toggle('hidden', platform !== 'wecom');
+      document.getElementById('channelSectionFeishu').classList.toggle('hidden', platform !== 'feishu');
+
+      const isEditing = Boolean(currentChannelKey());
+      channelPlatformInput.disabled = isEditing;
+      channelAccountIdInput.disabled = isEditing || platform === 'ddingtalk';
+      if (platform === 'ddingtalk') {
+        channelAccountIdInput.value = 'default';
+        channelAccountHint.textContent = '钉钉插件当前是单账号结构，账号 ID 固定为 default。';
+      } else {
+        channelAccountHint.textContent = isEditing ? '编辑时不修改平台和账号 ID；如需变更，请删除后重建。只允许小写英文字母和下划线。' : '同一平台下的账号 ID 不能重复，只允许小写英文字母和下划线。';
+      }
+
+      const wecomBotMode = platform === 'wecom' && (wecomMode === 'bot' || wecomMode === 'bot-websocket');
+      const wecomWebhookMode = platform === 'wecom' && wecomMode === 'bot';
+      const wecomWebsocketMode = platform === 'wecom' && wecomMode === 'bot-websocket';
+      const wecomAgentMode = platform === 'wecom' && wecomMode === 'agent';
+
+      document.getElementById('channelElevatedPermissionsSection').classList.toggle('hidden', platform !== 'qqbot');
+      document.getElementById('wecomBotWebhookFieldsTokenWrap').classList.toggle('hidden', !(wecomWebhookMode || wecomAgentMode));
+      document.getElementById('wecomBotWebhookFieldsAesWrap').classList.toggle('hidden', !(wecomWebhookMode || wecomAgentMode));
+      document.getElementById('wecomBotFieldsAibotWrap').classList.toggle('hidden', !wecomBotMode);
+      document.getElementById('wecomBotFieldsBotIdsWrap').classList.toggle('hidden', !wecomBotMode);
+      document.getElementById('wecomBotFieldsReceiveWrap').classList.toggle('hidden', !wecomBotMode);
+      document.getElementById('wecomBotWsFieldsBotIdWrap').classList.toggle('hidden', !wecomWebsocketMode);
+      document.getElementById('wecomBotWsFieldsSecretWrap').classList.toggle('hidden', !wecomWebsocketMode);
+      document.getElementById('wecomAgentFieldsCorpIdWrap').classList.toggle('hidden', !wecomAgentMode);
+      document.getElementById('wecomAgentFieldsCorpSecretWrap').classList.toggle('hidden', !wecomAgentMode);
+      document.getElementById('wecomAgentFieldsAgentIdWrap').classList.toggle('hidden', !wecomAgentMode);
+
+      document.getElementById('feishuVerificationToken').parentElement.classList.toggle('hidden', platform !== 'feishu');
+      document.getElementById('feishuWebhookPath').parentElement.classList.toggle('hidden', !(platform === 'feishu' && feishuConnectionMode === 'webhook'));
+    }
+
+    function resetChannelForm() {
+      currentChannelPlatform = '';
+      currentChannelAccountId = '';
+      channelPlatformInput.value = 'qqbot';
+      channelAccountIdInput.value = '';
+      channelNameInput.value = '';
+      channelEnabledInput.value = 'true';
+      channelAllowFromQqbotInput.value = '';
+      qqbotAppIdInput.value = '';
+      qqbotClientSecretInput.value = '';
+      qqbotClientSecretFileInput.value = '';
+      dingtalkClientIdInput.value = '';
+      dingtalkClientSecretInput.value = '';
+      wecomModeInput.value = 'agent';
+      wecomTokenInput.value = '';
+      wecomEncodingAESKeyInput.value = '';
+      wecomAibotidInput.value = '';
+      wecomBotIdsInput.value = '';
+      wecomReceiveIdInput.value = '';
+      wecomBotIdInput.value = '';
+      wecomSecretInput.value = '';
+      wecomCorpIdInput.value = '';
+      wecomCorpSecretInput.value = '';
+      wecomAgentIdInput.value = '';
+      feishuAppIdInput.value = '';
+      feishuAppSecretInput.value = '';
+      feishuConnectionModeInput.value = 'websocket';
+      feishuDomainInput.value = 'feishu';
+      feishuEncryptKeyInput.value = '';
+      feishuVerificationTokenInput.value = '';
+      feishuWebhookPathInput.value = '/feishu/events';
+      updateChannelFormSections();
+    }
+
+    function fillChannelForm(record) {
+      currentChannelPlatform = record?.channel || '';
+      currentChannelAccountId = record?.account_id || '';
+      const config = record?.config || {};
+      channelPlatformInput.value = record?.channel || 'qqbot';
+      channelAccountIdInput.value = record?.account_id || '';
+      channelNameInput.value = config?.name || record?.name || '';
+      channelEnabledInput.value = config?.enabled === false ? 'false' : 'true';
+      channelAllowFromQqbotInput.value = ((record?.permissions || {}).elevated?.allow_from?.qqbot || []).join('\n');
+      qqbotAppIdInput.value = config?.appId || '';
+      qqbotClientSecretInput.value = config?.clientSecret || '';
+      qqbotClientSecretFileInput.value = config?.clientSecretFile || '';
+      dingtalkClientIdInput.value = config?.clientId || '';
+      dingtalkClientSecretInput.value = config?.clientSecret || '';
+      wecomModeInput.value = config?.mode === 'agent' ? 'agent' : (config?.connectionMode === 'websocket' ? 'bot-websocket' : 'bot');
+      wecomTokenInput.value = config?.token || '';
+      wecomEncodingAESKeyInput.value = config?.encodingAESKey || '';
+      wecomAibotidInput.value = config?.aibotid || '';
+      wecomBotIdsInput.value = config?.botIds || '';
+      wecomReceiveIdInput.value = config?.receiveId || '';
+      wecomBotIdInput.value = config?.botId || '';
+      wecomSecretInput.value = config?.secret || '';
+      wecomCorpIdInput.value = config?.corpId || '';
+      wecomCorpSecretInput.value = config?.corpSecret || '';
+      wecomAgentIdInput.value = config?.agentId || '';
+      feishuAppIdInput.value = config?.appId || '';
+      feishuAppSecretInput.value = config?.appSecret || '';
+      feishuConnectionModeInput.value = config?.connectionMode || 'websocket';
+      feishuDomainInput.value = config?.domain || 'feishu';
+      feishuEncryptKeyInput.value = config?.encryptKey || '';
+      feishuVerificationTokenInput.value = config?.verificationToken || '';
+      feishuWebhookPathInput.value = config?.webhookPath || '/feishu/events';
+      updateChannelFormSections();
+    }
+
+    function buildChannelPayload() {
+      const platform = channelPlatformInput.value;
+      const payload = {
+        original_platform: currentChannelPlatform,
+        original_account_id: currentChannelAccountId,
+        platform,
+        account_id: channelAccountIdInput.value.trim(),
+        name: channelNameInput.value.trim(),
+        enabled: channelEnabledInput.value === 'true',
+        permissions: {
+          elevated: {
+            allow_from: {
+              qqbot: parseLineList(channelAllowFromQqbotInput.value),
+            },
+          },
+        },
+      };
+      if (platform === 'qqbot') {
+        if (!isValidMachineId(payload.account_id)) {
+          throw new Error('Channel 账号 ID 只允许小写英文字母和下划线。');
+        }
+        payload.appId = qqbotAppIdInput.value.trim();
+        payload.clientSecret = qqbotClientSecretInput.value.trim();
+        payload.clientSecretFile = qqbotClientSecretFileInput.value.trim();
+      } else if (platform === 'ddingtalk') {
+        payload.account_id = 'default';
+        payload.clientId = dingtalkClientIdInput.value.trim();
+        payload.clientSecret = dingtalkClientSecretInput.value.trim();
+      } else if (platform === 'wecom') {
+        if (!isValidMachineId(payload.account_id)) {
+          throw new Error('Channel 账号 ID 只允许小写英文字母和下划线。');
+        }
+        const modeValue = wecomModeInput.value;
+        payload.mode = modeValue === 'agent' ? 'agent' : 'bot';
+        payload.connectionMode = modeValue === 'bot-websocket' ? 'websocket' : 'webhook';
+        payload.token = wecomTokenInput.value.trim();
+        payload.encodingAESKey = wecomEncodingAESKeyInput.value.trim();
+        payload.aibotid = wecomAibotidInput.value.trim();
+        payload.botIds = wecomBotIdsInput.value.trim();
+        payload.receiveId = wecomReceiveIdInput.value.trim();
+        payload.botId = wecomBotIdInput.value.trim();
+        payload.secret = wecomSecretInput.value.trim();
+        payload.corpId = wecomCorpIdInput.value.trim();
+        payload.corpSecret = wecomCorpSecretInput.value.trim();
+        payload.agentId = wecomAgentIdInput.value.trim();
+      } else if (platform === 'feishu') {
+        if (!isValidMachineId(payload.account_id)) {
+          throw new Error('Channel 账号 ID 只允许小写英文字母和下划线。');
+        }
+        payload.appId = feishuAppIdInput.value.trim();
+        payload.appSecret = feishuAppSecretInput.value.trim();
+        payload.connectionMode = feishuConnectionModeInput.value;
+        payload.domain = feishuDomainInput.value.trim();
+        payload.encryptKey = feishuEncryptKeyInput.value.trim();
+        payload.verificationToken = feishuVerificationTokenInput.value.trim();
+        payload.webhookPath = feishuWebhookPathInput.value.trim();
+      }
+      return payload;
+    }
+
+    function renderChannelTable() {
+      const keyword = channelSearchInput.value.trim().toLowerCase();
+      const entries = (storeState.channelCatalog || []).filter((item) => {
+        if (!keyword) return true;
+        const haystack = [
+          item.channel || '',
+          item.account_id || '',
+          item.name || '',
+          item.config_type || '',
+          item.bound_agent_id || '',
+        ].join(' ').toLowerCase();
+        return haystack.includes(keyword);
+      });
+      channelTable.innerHTML = '';
+      if (!entries.length) {
+        channelTable.innerHTML = '<tr><td colspan="7" class="hint">没有匹配的 Channel。</td></tr>';
+        return;
+      }
+      entries.forEach((item) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td><span class="cell-ellipsis" title="${channelPlatformLabel(item.channel || item.platform || '')}">${channelPlatformLabel(item.channel || item.platform || '')}</span></td>
+          <td><span class="cell-ellipsis" title="${item.account_id || '-'}">${item.account_id || '-'}</span></td>
+          <td><span class="cell-wrap" title="${item.name || '-'}">${item.name || '-'}</span></td>
+          <td><span class="cell-wrap" title="${channelTypeLabel(item.config_type)}">${channelTypeLabel(item.config_type)}</span></td>
+          <td>
+            <label class="switch" title="${item.enabled === false ? '已禁用' : '已启用'}">
+              <input type="checkbox" data-toggle-channel="${item.channel}:${item.account_id}" ${item.enabled === false ? '' : 'checked'}>
+              <span class="slider"></span>
+            </label>
+          </td>
+          <td><span class="cell-ellipsis" title="${item.bound_agent_id || '-'}">${item.bound_agent_id || '-'}</span></td>
+          <td>
+            <div class="row-actions">
+              <button class="secondary tiny-btn" data-edit-channel="${item.channel}:${item.account_id}">编辑</button>
+              <button class="secondary tiny-btn" data-delete-channel="${item.channel}:${item.account_id}">删除</button>
+            </div>
+          </td>
+        `;
+        channelTable.appendChild(row);
+      });
+      channelTable.querySelectorAll('[data-toggle-channel]').forEach((button) => {
+        button.addEventListener('change', async () => {
+          const [platform, accountId] = String(button.dataset.toggleChannel || '').split(':');
+          const record = getChannelRecord(platform, accountId);
+          if (!record) return;
+          const nextEnabled = button.checked;
+          if (!confirmAction(`确认${nextEnabled ? '启用' : '禁用'} Channel？`, `${channelPlatformLabel(platform)}/${accountId}`)) {
+            button.checked = !nextEnabled;
+            return;
+          }
+          const payload = { ...(record.config || {}), platform, account_id: accountId, enabled: nextEnabled };
+          try {
+            await request('/api/store/channels/save', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            });
+            await loadStore();
+            setLog(`已${nextEnabled ? '启用' : '禁用'} Channel：${channelPlatformLabel(platform)}/${accountId}`);
+          } catch (error) {
+            button.checked = !nextEnabled;
+            setStatusBadge(false, '更新 Channel 状态失败');
+            setLog(String(error));
+          }
+        });
+      });
+      channelTable.querySelectorAll('[data-edit-channel]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const [platform, accountId] = String(button.dataset.editChannel || '').split(':');
+          const record = getChannelRecord(platform, accountId);
+          if (!record) return;
+          fillChannelForm(record);
+          openChannelModal('edit');
+        });
+      });
+      channelTable.querySelectorAll('[data-delete-channel]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const [platform, accountId] = String(button.dataset.deleteChannel || '').split(':');
+          const record = getChannelRecord(platform, accountId);
+          if (!record) return;
+          if (!confirmAction('确认删除 Channel？', `${channelPlatformLabel(platform)}/${accountId}`)) return;
+          await deleteChannel(platform, accountId);
+        });
+      });
+    }
+
+    function fillAgentForm(agentId, record) {
+      currentAgentKey = agentId || '';
+      agentIdInput.value = record?.id || '';
+      agentIdInput.disabled = Boolean(agentId);
+      agentNameInput.value = record?.name || record?.id || '';
+      renderAgentProviderSelector(record?.provider_order || [], record?.provider_order || []);
+      renderAgentChannelOptions(record?.bindings || []);
+      const permissions = record?.permissions || {};
+      const elevated = permissions.elevated || {};
+      const allowFrom = elevated.allow_from || {};
+      const execConfig = permissions.exec || {};
+      agentElevatedModeInput.value = elevated.mode || '';
+      agentAllowFromWebchatInput.value = (allowFrom.webchat || []).join('\n');
+      agentExecSecurityInput.value = execConfig.security || '';
+      agentExecAskInput.value = execConfig.ask || '';
+      agentExecAllowlistInput.value = (execConfig.allowlist || []).join('\n');
+    }
+
+    function resetAgentForm() {
+      currentAgentKey = '';
+      agentIdInput.disabled = false;
+      agentIdInput.value = '';
+      agentNameInput.value = '';
+      agentProviderDraftOrder = [];
+      renderAgentProviderSelector([], []);
+      renderAgentChannelOptions([]);
+      agentElevatedModeInput.value = '';
+      agentAllowFromWebchatInput.value = '';
+      agentExecSecurityInput.value = '';
+      agentExecAskInput.value = '';
+      agentExecAllowlistInput.value = '';
+    }
+
+    function buildAgentPayload() {
+      const agentId = agentIdInput.value.trim();
+      if (!isValidMachineId(agentId)) {
+        throw new Error('Agent ID 只允许小写英文字母和下划线。');
+      }
+      const providerOrder = selectedAgentProviderOrder();
+      if (!providerOrder.length) {
+        throw new Error('请至少为 Agent 选择一个 Provider。');
+      }
+      return {
+        original_id: currentAgentKey,
+        id: agentId,
+        name: agentNameInput.value.trim(),
+        provider_order: providerOrder,
+        bindings: selectedAgentBindings(),
+        permissions: {
+          elevated: {
+            mode: agentElevatedModeInput.value || '',
+            allow_from: {
+              webchat: parseLineList(agentAllowFromWebchatInput.value),
+            },
+          },
+          exec: {
+            security: agentExecSecurityInput.value || '',
+            ask: agentExecAskInput.value || '',
+            allowlist: parseLineList(agentExecAllowlistInput.value),
+          },
+        },
+      };
+    }
+
+    function renderAgentTable() {
+      const keyword = agentSearchInput.value.trim().toLowerCase();
+      const entries = (storeState.agentOrder || [])
+        .map((agentId) => [agentId, (storeState.agents || {})[agentId]])
+        .filter(([, record]) => record)
+        .filter(([, record]) => {
+          if (!keyword) return true;
+          const haystack = [
+            record.id || '',
+            record.name || '',
+            ...(record.provider_order || []),
+            ...((record.bindings || []).map((item) => `${item.channel}/${item.account_id}`)),
+          ].join(' ').toLowerCase();
+          return haystack.includes(keyword);
+        });
+      agentTable.innerHTML = '';
+      if (!entries.length) {
+        agentTable.innerHTML = '<tr><td colspan="5" class="hint">没有匹配的 Agent。</td></tr>';
+        return;
+      }
+      entries.forEach(([agentId, record]) => {
+        const bindingsText = (record.bindings || []).map((item) => `${item.channel}/${item.account_id}`).join('，') || '-';
+        const primaryProviderText = (record.provider_order || [])[0] || '-';
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td><span class="cell-ellipsis" title="${agentId}">${agentId}</span></td>
+          <td><span class="cell-ellipsis" title="${record.name || '-'}">${record.name || '-'}</span></td>
+          <td><span class="cell-wrap" title="${bindingsText}">${bindingsText}</span></td>
+          <td><span class="cell-wrap" title="${primaryProviderText}">${primaryProviderText}</span></td>
+          <td>
+            <div class="row-actions">
+              <button class="secondary tiny-btn" data-apply-agent="${agentId}" title="把这个 Agent 当前在面板里的 Provider、Channel、提权模式与 exec 审批配置一起写入 OpenClaw，并重启网关。Channel 级提权来源以 Channels 管理中的设置为准。">应用</button>
+              <button class="secondary tiny-btn" data-edit-agent="${agentId}">编辑</button>
+              <button class="secondary tiny-btn" data-delete-agent="${agentId}" ${agentId === 'main' ? 'disabled' : ''}>删除</button>
+            </div>
+          </td>
+        `;
+        agentTable.appendChild(row);
+      });
+      agentTable.querySelectorAll('[data-edit-agent]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const agentId = button.dataset.editAgent;
+          fillAgentForm(agentId, storeState.agents[agentId]);
+          openAgentModal('edit');
+        });
+      });
+      agentTable.querySelectorAll('[data-apply-agent]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const agentId = button.dataset.applyAgent;
+          if (!agentId) return;
+          if (!confirmAction('确认应用该 Agent 配置并重启网关？', agentId)) return;
+          await applyAgent(agentId);
+        });
+      });
+      agentTable.querySelectorAll('[data-delete-agent]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const agentId = button.dataset.deleteAgent;
+          if (!agentId) return;
+          if (!confirmAction('确认删除 Agent？', agentId)) return;
+          await deleteAgent(agentId);
+        });
+      });
+    }
+
+    async function persistModelCatalog(models, successMessage) {
+      const data = await request('/api/store/models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ models }),
+      });
+      storeState = {
+        ...storeState,
+        modelCatalog: data.modelCatalog || [],
+        providers: data.providers || storeState.providers,
+      };
+      renderStore(storeState);
+      setStatusBadge(true, '模型库已保存');
+      setLog(successMessage || `模型库已保存，当前 ${data.count} 个模型。`);
+    }
+
+    function fillProviderForm(providerName, record) {
+      currentProviderKey = providerName || '';
+      currentProviderEnabled = record?.enabled !== false;
+      baseUrlInput.value = record?.site || record?.base_url || '';
+      apiKeysInput.value = (record?.api_keys || []).join('\n');
+      buildProviderModelDraft(record);
+      renderProviderModelEditor(record?.default_model_id || '');
+      updateApiSuggestion();
+      renderProviderTable();
+    }
+
+    function renderStore(store) {
+      storeState = store;
+      runtimeAuthState = store.runtimeAuthStatus || null;
+      oauthLoginState = store.oauthLogin || null;
+      renderModelCatalogTable();
+      renderProviderTable();
+      renderChannelTable();
+      renderAgentTable();
+      renderCurrentStoreConfig();
+      renderHomeOverview();
+      if (oauthLoginState?.active) {
+        startOauthLoginPolling();
+      } else {
+        stopOauthLoginPolling();
+      }
+    }
+
+    function renderCurrentStoreConfig() {
+      const enabledProviderIds = (storeState.providerOrder || [])
+        .filter((providerId) => (storeState.providers?.[providerId] || {}).enabled !== false);
+      enabledProviderCount.textContent = `${enabledProviderIds.length} 个`;
+      panelAgentCount.textContent = `${(storeState.agentOrder || []).length} 个`;
+      panelChannelCount.textContent = `${(storeState.channelCatalog || []).length} 个`;
+    }
+
+    function createKvItem(label, value) {
+      const safeValue = value && String(value).trim() ? String(value) : '-';
+      return `<div class="home-kv-item"><div class="home-kv-key">${label}</div><div class="home-kv-value">${safeValue}</div></div>`;
+    }
+
+    function formatRuntimeAuthMode(mode) {
+      const normalized = String(mode || '').trim().toLowerCase();
+      if (normalized === 'oauth') return 'OAuth';
+      if (normalized === 'provider') return 'Provider';
+      return '-';
+    }
+
+    function formatOauthStatus(status) {
+      const normalized = String(status || '').trim().toLowerCase();
+      if (normalized === 'idle') return '空闲';
+      if (normalized === 'running') return '进行中';
+      if (normalized === 'cancelling') return '取消中';
+      if (normalized === 'cancelled') return '已取消';
+      if (normalized === 'completed') return '已完成';
+      if (normalized === 'failed') return '失败';
+      return normalized || '-';
+    }
+
+    function formatOauthStage(stage) {
+      const normalized = String(stage || '').trim().toLowerCase();
+      if (normalized === 'idle') return '空闲';
+      if (normalized === 'starting') return '正在启动';
+      if (normalized === 'open_url') return '等待打开登录链接';
+      if (normalized === 'await_redirect') return '等待粘贴回调地址';
+      if (normalized === 'submitting') return '正在提交回调地址';
+      if (normalized === 'cancelling') return '正在取消';
+      if (normalized === 'cancelled') return '已取消';
+      if (normalized === 'completed') return '已完成';
+      if (normalized === 'failed') return '失败';
+      return normalized || '-';
+    }
+
+    function sanitizeOauthOutput(value) {
+      let text = String(value || '');
+      if (!text) return '等待开始…';
+      text = text.replace(/\x1B\[[0-?]*[ -/]*[@-~]/g, '');
+      text = text.replace(/\r+/g, '\n');
+      const pivotMarkers = ['OAuth URL ready', 'Open this URL in your LOCAL browser:', 'Setup cancelled.'];
+      const pivot = Math.max(...pivotMarkers.map((marker) => text.lastIndexOf(marker)));
+      if (pivot >= 0) {
+        text = text.slice(pivot);
+      }
+      const cleanedLines = text
+        .split('\n')
+        .map((line) => line.replace(/\s+$/g, ''))
+        .filter((line) => {
+          const trimmed = line.trim();
+          if (!trimmed) return false;
+          if (/^[│└├╮╯◇◆_─-]+$/.test(trimmed)) return false;
+          if (/^[A-Za-z]$/.test(trimmed)) return false;
+          return true;
+        });
+      return cleanedLines.join('\n').trim() || '等待开始…';
+    }
+
+    function oauthDefaultModelValue() {
+      return String(
+        storeState?.runtimeAuth?.oauth?.default_model_id
+        || runtimeAuthState?.oauth?.default_model_id
+        || 'gpt-5.4'
+      ).trim() || 'gpt-5.4';
+    }
+
+    function renderRuntimeAuthCard() {
+      const runtimeAuth = storeState?.runtimeAuth || {};
+      const status = runtimeAuthState || storeState?.runtimeAuthStatus || {};
+      const oauth = status?.oauth || {};
+      const login = oauthLoginState || storeState?.oauthLogin || {};
+      const plannedMode = formatRuntimeAuthMode(runtimeAuth?.mode || status?.mode);
+      const currentMode = formatRuntimeAuthMode(status?.current_mode);
+      const accountText = oauth?.email || oauth?.account_id || '-';
+      const loginStateText = oauth?.authenticated ? `已登录${oauth?.profile_count ? ` · ${oauth.profile_count} 份凭据` : ''}` : '未登录';
+      const expiresText = oauth?.expires ? formatDateTime(oauth.expires) : '-';
+      const sessionText = login?.active
+        ? `${formatOauthStatus(login?.status)} · ${formatOauthStage(login?.stage)}`
+        : (login?.status && login.status !== 'idle' ? formatOauthStatus(login?.status) : '-');
+      runtimeAuthSummary.innerHTML = [
+        createKvItem('计划模式', escapeHtml(plannedMode)),
+        createKvItem('当前运行模式', escapeHtml(currentMode)),
+        createKvItem('OAuth 登录状态', escapeHtml(loginStateText)),
+        createKvItem('OAuth 账号', escapeHtml(accountText)),
+        createKvItem('OAuth 默认模型', escapeHtml(oauthDefaultModelValue())),
+        createKvItem('OAuth 过期时间', escapeHtml(expiresText)),
+        createKvItem('登录流程状态', escapeHtml(sessionText)),
+      ].join('');
+
+      const models = Array.isArray(oauth?.available_models) ? oauth.available_models : [];
+      const currentValue = oauthDefaultModelValue();
+      oauthDefaultModelSelect.innerHTML = '';
+      if (!models.length) {
+        oauthDefaultModelSelect.innerHTML = '<option value="gpt-5.4">gpt-5.4</option>';
+      } else {
+        models.forEach((item) => {
+          const option = document.createElement('option');
+          option.value = item.id || '';
+          option.textContent = item.name ? `${item.name} (${item.id})` : (item.id || '');
+          oauthDefaultModelSelect.appendChild(option);
+        });
+      }
+      if ([...oauthDefaultModelSelect.options].some((option) => option.value === currentValue)) {
+        oauthDefaultModelSelect.value = currentValue;
+      }
+    }
+
+    function renderOauthLoginModal() {
+      const login = oauthLoginState || storeState?.oauthLogin || {};
+      const status = runtimeAuthState || storeState?.runtimeAuthStatus || {};
+      const oauth = status?.oauth || {};
+      const rows = [];
+      const pushItem = (label, value) => {
+        rows.push(`
+          <div class="status-item">
+            <span class="k">${escapeHtml(label)}</span>
+            <div class="v">${value}</div>
+          </div>
+        `);
+      };
+      pushItem('当前状态', escapeHtml(formatOauthStatus(login?.status || 'idle')));
+      pushItem('当前阶段', escapeHtml(formatOauthStage(login?.stage || 'idle')));
+      pushItem('OAuth 账号', escapeHtml(oauth?.email || oauth?.account_id || '-'));
+      pushItem(
+        '登录链接',
+        login?.oauth_url
+          ? `<a href="${escapeHtml(login.oauth_url)}" target="_blank" rel="noreferrer">OpenAI 登录页</a>`
+          : '<span class="hint">尚未生成</span>'
+      );
+      oauthLoginStateGrid.innerHTML = rows.join('');
+      oauthLoginUrlInput.value = login?.oauth_url || '';
+      oauthLoginLog.textContent = sanitizeOauthOutput(login?.output || '');
+      startOauthLoginBtn.disabled = Boolean(login?.active);
+      submitOauthRedirectBtn.disabled = !Boolean(login?.active);
+      cancelOauthLoginBtn.disabled = !Boolean(login?.active);
+      copyOauthLoginUrlBtn.disabled = !Boolean(login?.oauth_url);
+      openOauthLoginUrlBtn.disabled = !Boolean(login?.oauth_url);
+    }
+
+    async function loadRuntimeAuthStatus() {
+      const payload = await request('/api/store/runtime-auth', { cache: 'no-store' });
+      storeState = {
+        ...storeState,
+        runtimeAuth: payload.runtimeAuth || storeState.runtimeAuth || {},
+        runtimeAuthStatus: payload.runtimeAuthStatus || null,
+        oauthLogin: payload.oauthLogin || null,
+      };
+      runtimeAuthState = storeState.runtimeAuthStatus || null;
+      oauthLoginState = storeState.oauthLogin || null;
+      renderRuntimeAuthCard();
+      renderOauthLoginModal();
+      return payload;
+    }
+
+    function stopOauthLoginPolling() {
+      if (!oauthLoginPollTimer) return;
+      window.clearInterval(oauthLoginPollTimer);
+      oauthLoginPollTimer = 0;
+    }
+
+    function startOauthLoginPolling() {
+      if (oauthLoginPollTimer) return;
+      oauthLoginPollTimer = window.setInterval(async () => {
+        try {
+          await loadRuntimeAuthStatus();
+          const login = oauthLoginState || {};
+          if (!login.active) {
+            stopOauthLoginPolling();
+            if (login.status === 'completed') {
+              setStatusBadge(true, 'OAuth 登录完成');
+              setLog('OpenAI OAuth 登录已完成，可以切换到 OAuth 模式。');
+            } else if (login.status === 'failed') {
+              setStatusBadge(false, 'OAuth 登录失败');
+            }
+          }
+        } catch (_) {
+        }
+      }, 1200);
+    }
+
+    function openOauthLoginModal() {
+      oauthLoginModalBackdrop.classList.remove('hidden');
+      renderOauthLoginModal();
+      const login = oauthLoginState || storeState?.oauthLogin || {};
+      if (login?.active) {
+        startOauthLoginPolling();
+      }
+    }
+
+    function closeOauthLoginModal() {
+      oauthLoginModalBackdrop.classList.add('hidden');
+      const login = oauthLoginState || storeState?.oauthLogin || {};
+      if (!login?.active) {
+        stopOauthLoginPolling();
+      }
+    }
+
+    function renderHomeOverview() {
+      renderRuntimeAuthCard();
+      const enabledProviderIds = (storeState.providerOrder || []).filter((providerId) => (storeState.providers?.[providerId] || {}).enabled !== false);
+      const mainAgent = (storeState.agents || {}).main || {};
+      const pendingProviderOrder = (mainAgent.provider_order || []).filter((providerId) => enabledProviderIds.includes(providerId));
+      const pendingPrimaryProviderId = pendingProviderOrder[0] || enabledProviderIds[0] || '';
+      const pendingPrimaryRecord = (storeState.providers || {})[pendingPrimaryProviderId] || {};
+      const pendingFallbacks = pendingProviderOrder.slice(1);
+      const enabledChannelCount = (storeState.channelCatalog || []).filter((item) => item.enabled !== false).length;
+      const boundChannelCount = (storeState.channelCatalog || []).filter((item) => item.bound_agent_id).length;
+
+      const runtimeFallbacks = runtimeStatusState?.fallbacks || [];
+      runtimeFallbackCount.textContent = `${runtimeFallbacks.length} 条`;
+      const runtimePrimaryModel = runtimeStatusState?.defaultModel || (liveConfigState?.provider && liveConfigState?.default_model_id ? `${liveConfigState.provider}/${liveConfigState.default_model_id}` : '-');
+
+      homeAgentCards.innerHTML = '';
+      const agentEntries = (storeState.agentOrder || [])
+        .map((agentId) => (storeState.agents || {})[agentId])
+        .filter(Boolean);
+      if (!agentEntries.length) {
+        homeAgentCards.innerHTML = '<div class="hint">暂无 Agent。</div>';
+      } else {
+        agentEntries.forEach((record) => {
+          const card = document.createElement('div');
+          card.className = 'home-mini-card';
+          const providerOrder = record.provider_order || [];
+          const bindings = (record.bindings || []).map((item) => `${item.channel}/${item.account_id}`);
+          card.innerHTML = `
+            <div class="home-mini-card-title">
+              <span>${record.name || record.id}</span>
+              <span class="home-chip">${record.id === 'main' ? 'main' : record.id}</span>
+            </div>
+            <div class="home-mini-meta">
+              <div><strong>主 Provider：</strong>${providerOrder[0] || '-'}</div>
+              <div><strong>fallback：</strong>${Math.max(providerOrder.length - 1, 0)} 条</div>
+              <div><strong>Channels：</strong>${bindings.length ? bindings.join('，') : '-'}</div>
+            </div>
+          `;
+          homeAgentCards.appendChild(card);
+        });
+      }
+
+      homeProviderCards.innerHTML = '';
+      if (!enabledProviderIds.length) {
+        homeProviderCards.innerHTML = '<div class="hint">当前没有启用的 Provider。</div>';
+      } else {
+        enabledProviderIds.forEach((providerId) => {
+          const record = (storeState.providers || {})[providerId] || {};
+          const models = enabledProviderModels(record);
+          const card = document.createElement('div');
+          card.className = 'home-mini-card';
+          card.innerHTML = `
+            <div class="home-mini-card-title home-provider-card-title">
+              <span class="home-provider-name" title="${escapeHtml(providerId)}">${escapeHtml(providerId)}</span>
+              <div class="home-provider-chip-row">
+                <span class="home-chip">${escapeHtml(providerApiSummary(record))}</span>
+              </div>
+            </div>
+            <div class="home-mini-meta">
+              <div class="home-provider-line">
+                <span class="home-provider-line-label">Site：</span>
+                <span class="home-provider-line-value" title="${escapeHtml(record.site || record.base_url || '-')}">${escapeHtml(record.site || record.base_url || '-')}</span>
+              </div>
+              <div><strong>默认模型：</strong>${escapeHtml(record.default_model_id || '-')}</div>
+              <div><strong>模型数：</strong>${models.length} 个</div>
+              <div><strong>Key 数：</strong>${(record.api_keys || []).length} 把</div>
+            </div>
+          `;
+          homeProviderCards.appendChild(card);
+        });
+      }
+
+      homeSessionCards.innerHTML = '';
+      if (!authSessionsState.length) {
+        homeSessionCards.innerHTML = '<div class="hint">当前没有在线会话。</div>';
+      } else {
+        authSessionsState.forEach((session) => {
+          const card = document.createElement('div');
+          card.className = 'home-mini-card';
+
+          const title = document.createElement('div');
+          title.className = 'home-mini-card-title';
+
+          const titleText = document.createElement('span');
+          titleText.textContent = session.username || '未知用户';
+          title.appendChild(titleText);
+
+          const chip = document.createElement('span');
+          chip.className = 'home-chip';
+          chip.textContent = session.is_current ? '当前' : '在线';
+          title.appendChild(chip);
+
+          const meta = document.createElement('div');
+          meta.className = 'home-session-meta';
+
+          [
+            ['会话', session.id || '-'],
+            ['来源 IP', session.remote_addr || '-'],
+            ['登录时间', formatDateTime(session.created_at)],
+            ['最近活跃', `${formatDateTime(session.last_seen_at)} · ${formatRelativeTime(session.last_seen_at)}`],
+            ['UA', session.user_agent || '-'],
+          ].forEach(([label, value]) => {
+            const line = document.createElement('div');
+            line.className = 'home-session-line';
+            const strong = document.createElement('strong');
+            strong.textContent = `${label}：`;
+            line.appendChild(strong);
+            line.appendChild(document.createTextNode(value));
+            meta.appendChild(line);
+          });
+
+          card.appendChild(title);
+          card.appendChild(meta);
+          homeSessionCards.appendChild(card);
+        });
+      }
+    }
+
+    function resetProviderForm() {
+      currentProviderKey = '';
+      currentProviderEnabled = true;
+      baseUrlInput.value = '';
+      apiKeysInput.value = '';
+      defaultModelIdSelect.innerHTML = '';
+      buildProviderModelDraft(null);
+      renderProviderModelEditor('');
+      updateApiSuggestion();
+      renderProviderTable();
+    }
+
+    function buildProviderPayload() {
+      const enabledModels = providerModelDraft
+        .filter((item) => item.enabled)
+        .map((item) => ({
+          id: item.id,
+          name: item.name || item.id,
+          api: item.api || '',
+          route_suffix: resolveProviderModelRoute(item),
+          enabled: true,
+        }));
+      if (!enabledModels.length) {
+        throw new Error('请至少启用一个模型。');
+      }
+      if (!defaultModelIdSelect.value) {
+        throw new Error('请选择默认模型。');
+      }
+      const site = baseUrlInput.value.trim();
+      const defaultModel = enabledModels.find((item) => item.id === defaultModelIdSelect.value);
+      const defaultApi = resolveProviderModelApi(defaultModel || {});
+      return {
+        original_name: currentProviderKey,
+        site,
+        base_url: site,
+        default_api: defaultApi,
+        api: defaultApi,
+        api_keys: parseLines(apiKeysInput.value, (line) => line),
+        models: enabledModels,
+        default_model_id: defaultModelIdSelect.value,
+        enabled: currentProviderEnabled,
+      };
+    }
+
+    async function request(path, options = {}) {
+      const response = await fetch(panelPath(path), options);
+      if (response.status === 401) {
+        window.location.href = panelPath('/login');
+        throw new Error('未登录或登录已失效。');
+      }
+      const payload = await response.json().catch(() => ({ ok: false, error: '响应解析失败' }));
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.error || '请求失败');
+      }
+      return payload.data;
+    }
+    async function loadStore() {
+      const store = await request('/api/store', { cache: 'no-store' });
+      renderStore(store);
+      return store;
+    }
+
+    async function previewCcswitchImport(file) {
+      if (!file) return;
+      setBusy(true);
+      try {
+        const sqlText = await file.text();
+        const data = await request('/api/store/providers/import/ccswitch/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            file_name: file.name || '',
+            sql_text: sqlText,
+          }),
+        });
+        ccswitchImportPreviewState = data || { file_name: '', items: [], skipped: [], summary: {} };
+        openCcswitchImportModal();
+        setStatusBadge(true, 'CCSwitch SQL 已解析');
+        setLog([
+          `已识别 ${data?.summary?.recognized || 0} 条 Provider`,
+          `可导入 ${data?.summary?.importable || 0} 条`,
+          data?.summary?.skipped ? `跳过 ${data.summary.skipped} 条` : '',
+        ].filter(Boolean).join(' · '));
+      } catch (error) {
+        setStatusBadge(false, 'CCSwitch SQL 解析失败');
+        setLog(String(error));
+      } finally {
+        ccswitchImportInput.value = '';
+        setBusy(false);
+      }
+    }
+
+    async function applyCcswitchImport() {
+      const selectedItems = selectedCcswitchImportItems();
+      if (!selectedItems.length) {
+        setStatusBadge(false, '未选择导入项');
+        setLog('请先勾选要导入的 Provider。');
+        return;
+      }
+      if (!confirmAction('确认导入选中的 CCSwitch Provider？', `共 ${selectedItems.length} 条`)) return;
+      setBusy(true);
+      try {
+        const result = await request('/api/store/providers/import/ccswitch/apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: selectedItems }),
+        });
+        await loadStore();
+        renderCcswitchImportPreview();
+        closeCcswitchImportModal();
+        const importedProviders = (result.imported || []).map((item) => item.provider).filter(Boolean);
+        const firstImportedProvider = importedProviders[0] || '';
+        if (firstImportedProvider) {
+          providerSearchInput.value = '';
+          window.setTimeout(() => focusProviderRow(firstImportedProvider), 80);
+        }
+        setStatusBadge(true, 'CCSwitch Provider 已导入');
+        setLog([
+          `导入成功 ${importedProviders.length} 条`,
+          result.added_model_ids?.length ? `新增模型 ${result.added_model_ids.length} 个` : '',
+          result.skipped?.length ? `跳过 ${result.skipped.length} 条` : '',
+        ].filter(Boolean).join(' · '));
+      } catch (error) {
+        setStatusBadge(false, 'CCSwitch Provider 导入失败');
+        setLog(String(error));
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function refreshSelectedProviderModels() {
+      const providerIds = selectedProviderIds();
+      if (!providerIds.length) {
+        setStatusBadge(false, '未选择 Provider');
+        setLog('请先勾选至少一个 Provider。');
+        return;
+      }
+      if (!confirmAction('确认刷新所选 Provider 的可用模型？', `共 ${providerIds.length} 条；仅更新面板 store，不会直接应用到 OpenClaw。`)) return;
+      setBusy(true);
+      setStatusBadge(true, '正在刷新可用模型');
+      setLog(`正在探测 ${providerIds.length} 个 Provider 的模型可用性，请稍候…`);
+      try {
+        const result = await request('/api/store/providers/refresh-models', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ provider_ids: providerIds }),
+        });
+        renderProviderRefreshDiff(result);
+        openProviderRefreshDiffModal();
+        try {
+          await loadStore();
+        } catch (error) {
+          console.error('loadStore after refreshSelectedProviderModels failed:', error);
+        }
+        const refreshed = result.refreshed || [];
+        const disabledCount = (result.disabled_provider_ids || []).length;
+        const changedCount = (result.diffs || []).filter((item) => item.changed).length;
+        const baseUrlChangedCount = (result.diffs || []).filter((item) => (item.before_base_url || '') !== (item.after_base_url || '')).length;
+        setStatusBadge(true, '可用模型已刷新');
+        setLog([
+          `已刷新 Provider：${refreshed.length} 条`,
+          `发生变化：${changedCount} 条`,
+          `识别可用模型：${result.total_available_models || 0} 个`,
+          `保留旧配置：${result.total_preserved_models || 0} 个`,
+          `修正 Site：${baseUrlChangedCount} 条`,
+          `禁用 Provider：${disabledCount} 条`,
+          ...(result.impacted_agents || []).length ? [`已解除 Agent 绑定：${(result.impacted_agents || []).map((item) => item.id).join('，')}`] : [],
+          ...refreshed.map((item) => `${item.provider} · ${item.enabled ? '启用' : '禁用'} · 本次探测 ${item.available_count || 0} 个${item.preserved_available_count ? ` · 保留旧配置 ${item.preserved_available_count} 个` : ''}${item.default_api ? ` · 默认 API ${item.default_api}` : ''}${item.base_url_retry_used ? ' · 已触发 Site 标准尾缀重试' : ''}`),
+        ].join('\n'));
+      } catch (error) {
+        setStatusBadge(false, '刷新可用模型失败');
+        setLog(String(error));
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function saveModels() {
+      setBusy(true);
+      try {
+        const models = parseModelsText(modelImportInput.value);
+        await persistModelCatalog(models, `模型库已导入并覆盖，当前 ${models.length} 个模型。`);
+      } catch (error) {
+        setStatusBadge(false, '保存模型库失败');
+        setLog(String(error));
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function saveProvider() {
+      const isCreate = !currentProviderKey;
+      setBusy(true);
+      try {
+        const data = await request('/api/store/providers/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(buildProviderPayload()),
+        });
+        if (isCreate) {
+          providerSearchInput.value = '';
+        }
+        await loadStore();
+        if (!isCreate) {
+          fillProviderForm(data.provider, storeState.providers[data.provider]);
+        }
+        setStatusBadge(true, isCreate ? '新增成功' : '修改成功');
+        setLog(`${isCreate ? '新增成功' : '修改成功'}：${storeState.providers[data.provider]?.site || storeState.providers[data.provider]?.base_url || data.provider}`);
+        closeProviderModal();
+        switchTab('providers');
+        window.setTimeout(() => focusProviderRow(data.provider), 80);
+      } catch (error) {
+        setStatusBadge(false, '保存 Provider 失败');
+        setLog(String(error));
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function deleteProvider(providerOverride = '') {
+      const provider = providerOverride || currentProviderKey;
+      const providerLabel = storeState.providers[provider]?.site || storeState.providers[provider]?.base_url || provider;
+      if (!provider) {
+        setStatusBadge(false, '未选择 Provider');
+        setLog('请先选择要删除的 Provider。');
+        return;
+      }
+      setBusy(true);
+      try {
+        const data = await request('/api/store/providers/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ provider }),
+        });
+        await loadStore();
+        if (provider === currentProviderKey) {
+          resetProviderForm();
+          closeProviderModal();
+        }
+        setStatusBadge(true, '删除成功');
+        setLog(`删除成功：${providerLabel}`);
+      } catch (error) {
+        setStatusBadge(false, '删除 Provider 失败');
+        setLog(String(error));
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function saveAgent() {
+      const isCreate = !currentAgentKey;
+      setBusy(true);
+      try {
+        const data = await request('/api/store/agents/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(buildAgentPayload()),
+        });
+        await loadStore();
+        fillAgentForm(data.agent, storeState.agents[data.agent]);
+        setStatusBadge(true, isCreate ? '新增成功' : '修改成功');
+        setLog(`${isCreate ? '新增成功' : '修改成功'}：${data.agent}`);
+        closeAgentModal();
+      } catch (error) {
+        setStatusBadge(false, '保存 Agent 失败');
+        setLog(String(error));
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function deleteAgent(agentOverride = '') {
+      const agentId = agentOverride || currentAgentKey;
+      if (!agentId) {
+        setStatusBadge(false, '未选择 Agent');
+        setLog('请先选择要删除的 Agent。');
+        return;
+      }
+      setBusy(true);
+      try {
+        await request('/api/store/agents/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ agent: agentId }),
+        });
+        await loadStore();
+        if (agentId === currentAgentKey) {
+          resetAgentForm();
+          closeAgentModal();
+        }
+        setStatusBadge(true, '删除成功');
+        setLog(`删除成功：${agentId}`);
+      } catch (error) {
+        setStatusBadge(false, '删除 Agent 失败');
+        setLog(String(error));
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function saveChannel() {
+      const isCreate = !currentChannelKey();
+      setBusy(true);
+      try {
+        const payload = buildChannelPayload();
+        const data = await request('/api/store/channels/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        await loadStore();
+        const record = getChannelRecord(data.platform, data.account_id);
+        if (record) {
+          fillChannelForm(record);
+        }
+        setStatusBadge(true, isCreate ? '新增成功' : '修改成功');
+        setLog(`${isCreate ? '新增成功' : '修改成功'}：${channelPlatformLabel(data.platform)}/${data.account_id}`);
+        closeChannelModal();
+      } catch (error) {
+        setStatusBadge(false, '保存 Channel 失败');
+        setLog(String(error));
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function deleteChannel(platformOverride = '', accountOverride = '') {
+      const platform = platformOverride || currentChannelPlatform;
+      const accountId = accountOverride || currentChannelAccountId;
+      if (!platform || !accountId) {
+        setStatusBadge(false, '未选择 Channel');
+        setLog('请先选择要删除的 Channel。');
+        return;
+      }
+      setBusy(true);
+      try {
+        await request('/api/store/channels/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ platform, account_id: accountId }),
+        });
+        await loadStore();
+        if (platform === currentChannelPlatform && accountId === currentChannelAccountId) {
+          resetChannelForm();
+          closeChannelModal();
+        }
+        setStatusBadge(true, '删除成功');
+        setLog(`删除成功：${channelPlatformLabel(platform)}/${accountId}`);
+      } catch (error) {
+        setStatusBadge(false, '删除 Channel 失败');
+        setLog(String(error));
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function applyAgent(agentId) {
+      setBusy(true);
+      setStatusBadge(true, '正在应用 Agent 配置');
+      setLog(`正在刷新 Agent 配置并重启网关：${agentId}`);
+      try {
+        const record = (storeState.agents || {})[agentId] || {};
+        const permissions = record.permissions || {};
+        const elevated = permissions.elevated || {};
+        const execConfig = permissions.exec || {};
+        const result = await request('/api/store/agents/apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ agent: agentId, restart_gateway: true }),
+        });
+        setStatusBadge(true, '应用成功');
+        setLog([
+          `应用成功：${result.agent}`,
+          `Provider 顺序：${(result.provider_order || []).join('，') || '-'}`,
+          `Channels：${(result.bindings || []).map((item) => `${item.channel}/${item.account_id}`).join('，') || '-'}`,
+          `提权模式：${elevated.mode || '未设置'}`,
+          `执行策略：${execConfig.security || '未设置'} / 审批：${execConfig.ask || '未设置'}`,
+          `更新文件数：${(result.updated_files || []).length}`,
+        ].join('\n'));
+        await refreshCurrentSummary();
+        await loadStatus();
+      } catch (error) {
+        setStatusBadge(false, '应用 Agent 配置失败');
+        setLog(String(error));
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    function updateLiveSummary(live) {
+      liveConfigState = live;
+      currentDefault.textContent = live.default_model_id ? `${live.provider}/${live.default_model_id}` : '-';
+      currentProvider.textContent = live.provider || '-';
+      if (agentInfo) {
+        agentInfo.textContent = `运行中 Agent：${(live.agents || []).join(', ') || '-'}`;
+      }
+      renderHomeOverview();
+    }
+
+    async function importCurrentOpenClaw() {
+      setBusy(true);
+      try {
+        const live = await request('/api/config', { cache: 'no-store' });
+        fillProviderForm(live.provider, {
+          provider: live.provider,
+          site: live.base_url,
+          base_url: live.base_url,
+          default_api: live.default_api || live.api || '',
+          api: live.default_api || live.api || '',
+          api_keys: live.api_keys,
+          models: (live.models || []).map((item) => ({
+            id: item.id,
+            name: item.name || item.id,
+            api: item.api || '',
+            enabled: true,
+          })),
+          default_model_id: live.default_model_id,
+          enabled: true,
+        });
+        updateLiveSummary(live);
+        setStatusBadge(true, '已导入当前 OpenClaw');
+        setLog(`已从当前 OpenClaw 导入 Provider：${live.provider}`);
+        openProviderModal('edit');
+      } catch (error) {
+        setStatusBadge(false, '导入当前 OpenClaw 失败');
+        setLog(String(error));
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function refreshCurrentSummary() {
+      try {
+        const live = await request('/api/config', { cache: 'no-store' });
+        updateLiveSummary(live);
+      } catch (error) {
+        liveConfigState = null;
+        currentDefault.textContent = '-';
+        currentProvider.textContent = '-';
+        if (agentInfo) {
+          agentInfo.textContent = '运行中 Agent：-';
+        }
+        renderHomeOverview();
+      }
+    }
+
+    async function loadStatus() {
+      try {
+        const payload = await request('/api/status', { cache: 'no-store' });
+        runtimeStatusState = payload;
+        statusOutput.textContent = JSON.stringify(payload, null, 2);
+        renderHomeOverview();
+      } catch (error) {
+        runtimeStatusState = null;
+        statusOutput.textContent = JSON.stringify({ error: String(error) }, null, 2);
+        renderHomeOverview();
+      }
+    }
+
+    async function loadSessions() {
+      try {
+        const payload = await request('/api/auth/sessions', { cache: 'no-store' });
+        authSessionsState = payload.sessions || [];
+      } catch (error) {
+        authSessionsState = [];
+        setLog(String(error));
+      }
+      renderHomeOverview();
+    }
+
+    async function startOauthLogin() {
+      setBusy(true);
+      setStatusBadge(true, '正在启动 OAuth 登录');
+      try {
+        oauthRedirectUrlInput.value = '';
+        oauthLoginState = await request('/api/store/runtime-auth/openai-codex/login/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+        });
+        storeState = { ...storeState, oauthLogin: oauthLoginState };
+        renderRuntimeAuthCard();
+        renderOauthLoginModal();
+        startOauthLoginPolling();
+        setLog('OpenAI OAuth 登录流程已启动，请在弹窗中打开链接并提交回跳地址。');
+      } catch (error) {
+        setStatusBadge(false, '启动 OAuth 登录失败');
+        setLog(String(error));
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function submitOauthRedirect() {
+      const redirectUrl = oauthRedirectUrlInput.value.trim();
+      if (!redirectUrl) {
+        setStatusBadge(false, '缺少回跳地址');
+        setLog('请先粘贴浏览器回跳地址。');
+        return;
+      }
+      setBusy(true);
+      setStatusBadge(true, '正在提交回跳地址');
+      try {
+        oauthLoginState = await request('/api/store/runtime-auth/openai-codex/login/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ redirect_url: redirectUrl }),
+        });
+        storeState = { ...storeState, oauthLogin: oauthLoginState };
+        renderRuntimeAuthCard();
+        renderOauthLoginModal();
+        startOauthLoginPolling();
+        setLog('回跳地址已提交，正在等待 OpenClaw 完成 OAuth 登录。');
+      } catch (error) {
+        setStatusBadge(false, '提交回跳地址失败');
+        setLog(String(error));
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function cancelOauthLogin() {
+      setBusy(true);
+      setStatusBadge(true, '正在取消 OAuth 登录');
+      try {
+        oauthLoginState = await request('/api/store/runtime-auth/openai-codex/login/cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+        });
+        storeState = { ...storeState, oauthLogin: oauthLoginState };
+        renderRuntimeAuthCard();
+        renderOauthLoginModal();
+        startOauthLoginPolling();
+        setLog('已向 OpenClaw 发送 OAuth 登录取消请求。');
+      } catch (error) {
+        setStatusBadge(false, '取消 OAuth 登录失败');
+        setLog(String(error));
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function switchRuntimeAuthMode(mode) {
+      const targetMode = String(mode || '').trim().toLowerCase();
+      if (!['provider', 'oauth'].includes(targetMode)) {
+        setStatusBadge(false, '运行方式非法');
+        setLog(`未知运行方式：${mode}`);
+        return;
+      }
+      setBusy(true);
+      setStatusBadge(true, `正在切换到 ${targetMode === 'oauth' ? 'OAuth' : 'Provider'} 模式`);
+      try {
+        const result = await request('/api/store/runtime-auth/mode', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mode: targetMode,
+            oauth: {
+              default_model_id: oauthDefaultModelSelect.value || oauthDefaultModelValue(),
+            },
+            apply: true,
+            restart_gateway: true,
+          }),
+        });
+        await loadStore();
+        await refreshCurrentSummary();
+        await loadStatus();
+        setStatusBadge(true, `已切换到 ${targetMode === 'oauth' ? 'OAuth' : 'Provider'} 模式`);
+        setLog([
+          `运行方式已切换为 ${targetMode === 'oauth' ? 'OAuth' : 'Provider'}`,
+          `当前默认模型：${result?.status?.default_model || '-'}`,
+        ].join('\n'));
+      } catch (error) {
+        setStatusBadge(false, `切换到 ${targetMode === 'oauth' ? 'OAuth' : 'Provider'} 模式失败`);
+        setLog(String(error));
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function refreshLatestConfig() {
+      const providerId = (storeState.providerOrder || [])[0] || '';
+      const record = (storeState.providers || {})[providerId];
+      if (!providerId || !record) {
+        setStatusBadge(false, '未设置当前配置');
+        setLog('请先到“Provider 管理”里维护至少一条 Provider。');
+        return;
+      }
+      if (record.enabled === false) {
+        setStatusBadge(false, '当前配置已禁用');
+        setLog('请先在“Provider 管理”里启用这条 Provider，再执行应用。');
+        return;
+      }
+      setBusy(true);
+      setStatusBadge(true, '正在刷新最新配置');
+      setLog('正在按面板中的最新配置全量刷新所有 Agent，并重启网关…');
+      try {
+        const result = await request('/api/store/apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ restart_gateway: true }),
+        });
+        setStatusBadge(true, '刷新成功');
+        setLog([
+          '最新配置已全量刷新并重启。',
+          `Provider: ${result.provider}`,
+          `默认模型: ${result.status.default_model}`,
+          `Fallback 数: ${(result.fallbacks || []).length}`,
+          `Agent 数: ${(result.agents || []).length}`,
+          `更新文件数: ${(result.updated_files || []).length}`,
+        ].join('\n'));
+        await refreshCurrentSummary();
+        await loadStatus();
+      } catch (error) {
+        setStatusBadge(false, '刷新最新配置失败');
+        setLog(String(error));
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function restartOpenClaw() {
+      setBusy(true);
+      setStatusBadge(true, '正在重启 OpenClaw');
+      setLog('正在重启 OpenClaw 网关…');
+      try {
+        await request('/api/restart', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+        });
+        setStatusBadge(true, 'OpenClaw 已重启');
+        setLog('OpenClaw 网关已重启。');
+        await refreshCurrentSummary();
+        await loadStatus();
+      } catch (error) {
+        setStatusBadge(false, '重启失败');
+        setLog(String(error));
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function logoutPanel() {
+      setBusy(true);
+      setStatusBadge(true, '正在退出登录');
+      try {
+        await request('/api/auth/logout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+        });
+      } catch (error) {
+        setStatusBadge(false, '退出登录失败');
+        setLog(String(error));
+        setBusy(false);
+        return;
+      }
+      window.location.href = panelPath('/login');
+    }
+
+    function switchTab(tabName, updateHash = true) {
+      document.querySelectorAll('.tab-btn').forEach((button) => {
+        button.classList.toggle('active', button.dataset.tab === tabName);
+      });
+      document.getElementById('tab-home').classList.toggle('hidden', tabName !== 'home');
+      document.getElementById('tab-models').classList.toggle('hidden', tabName !== 'models');
+      document.getElementById('tab-providers').classList.toggle('hidden', tabName !== 'providers');
+      document.getElementById('tab-channels').classList.toggle('hidden', tabName !== 'channels');
+      document.getElementById('tab-agents').classList.toggle('hidden', tabName !== 'agents');
+      if (updateHash) {
+        history.replaceState(null, '', `#${tabName}`);
+      }
+    }
+
+    function currentTabFromHash() {
+      const tab = location.hash.replace(/^#/, '').trim();
+      if (tab === 'models' || tab === 'providers' || tab === 'channels' || tab === 'agents') return tab;
+      return 'home';
+    }
+
+    document.querySelectorAll('.tab-btn').forEach((button) => {
+      button.addEventListener('click', () => switchTab(button.dataset.tab));
+    });
+
+    document.getElementById('importModelsBtn').addEventListener('click', () => {
+      if (!confirmAction('确认保存模型库？')) return;
+      saveModels();
+    });
+    document.getElementById('exportModelsBtn').addEventListener('click', () => {
+      modelImportInput.value = buildModelsText(storeState.modelCatalog || []);
+      setLog('已把当前模型库回填到导入框。');
+    });
+    document.getElementById('clearImportBtn').addEventListener('click', () => {
+      modelImportInput.value = '';
+      setLog('导入框已清空。');
+    });
+    providerSearchInput.addEventListener('input', renderProviderTable);
+    providerSelectAll.addEventListener('change', () => {
+      filteredProviderEntries().forEach(([providerId]) => {
+        if (providerSelectAll.checked) selectedProviderIdsState.add(providerId);
+        else selectedProviderIdsState.delete(providerId);
+      });
+      renderProviderTable();
+    });
+    refreshProviderModelsBtn.addEventListener('click', refreshSelectedProviderModels);
+    channelSearchInput.addEventListener('input', renderChannelTable);
+    document.getElementById('newChannelBtn').addEventListener('click', () => {
+      resetChannelForm();
+      openChannelModal('create');
+    });
+    document.getElementById('importCcswitchBtn').addEventListener('click', () => {
+      ccswitchImportInput.click();
+    });
+    ccswitchImportInput.addEventListener('change', async (event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      await previewCcswitchImport(file);
+    });
+    selectCcswitchFileBtn.addEventListener('click', () => {
+      ccswitchImportInput.click();
+    });
+    applyCcswitchImportBtn.addEventListener('click', applyCcswitchImport);
+    document.getElementById('newProviderBtn').addEventListener('click', () => {
+      resetProviderForm();
+      openProviderModal('create');
+    });
+    agentSearchInput.addEventListener('input', renderAgentTable);
+    document.getElementById('newAgentBtn').addEventListener('click', () => {
+      resetAgentForm();
+      openAgentModal('create');
+    });
+    document.getElementById('saveProviderBtn').addEventListener('click', () => {
+      if (!confirmAction('确认保存 Provider？')) return;
+      saveProvider();
+    });
+    providerModelSelectAll.addEventListener('change', () => {
+      providerModelDraft = providerModelDraft.map((item) => ({
+        ...item,
+        enabled: providerModelSelectAll.checked,
+      }));
+      renderProviderModelEditor(defaultModelIdSelect.value || '');
+    });
+    providerModelInvertBtn.addEventListener('click', () => {
+      providerModelDraft = providerModelDraft.map((item) => ({
+        ...item,
+        enabled: !item.enabled,
+      }));
+      renderProviderModelEditor(defaultModelIdSelect.value || '');
+    });
+    document.getElementById('deleteProviderBtn').addEventListener('click', () => {
+      if (!confirmAction('确认删除当前 Provider？')) return;
+      deleteProvider();
+    });
+    document.getElementById('saveChannelBtn').addEventListener('click', () => {
+      if (!confirmAction('确认保存 Channel？')) return;
+      saveChannel();
+    });
+    document.getElementById('deleteChannelBtn').addEventListener('click', () => {
+      if (!confirmAction('确认删除当前 Channel？')) return;
+      deleteChannel();
+    });
+    document.getElementById('saveAgentBtn').addEventListener('click', () => {
+      if (!confirmAction('确认保存 Agent？')) return;
+      saveAgent();
+    });
+    document.getElementById('deleteAgentBtn').addEventListener('click', () => {
+      if (!confirmAction('确认删除当前 Agent？')) return;
+      deleteAgent();
+    });
+    document.getElementById('applyCurrentBtn').addEventListener('click', () => {
+      if (!confirmAction('确认刷新为最新配置并重启网关？')) return;
+      refreshLatestConfig();
+    });
+    document.getElementById('restartBtn').addEventListener('click', () => {
+      if (!confirmAction('确认重启 OpenClaw？')) return;
+      restartOpenClaw();
+    });
+    openOauthLoginBtn.addEventListener('click', () => {
+      openOauthLoginModal();
+    });
+    switchProviderModeBtn.addEventListener('click', () => {
+      if (!confirmAction('确认切换到 Provider 模式并重启 OpenClaw？')) return;
+      switchRuntimeAuthMode('provider');
+    });
+    switchOauthModeBtn.addEventListener('click', () => {
+      if (!confirmAction('确认切换到 OAuth 模式并重启 OpenClaw？')) return;
+      switchRuntimeAuthMode('oauth');
+    });
+    startOauthLoginBtn.addEventListener('click', () => {
+      if (!confirmAction('确认开始新的 OpenAI OAuth 登录流程？')) return;
+      startOauthLogin();
+    });
+    submitOauthRedirectBtn.addEventListener('click', () => {
+      if (!confirmAction('确认提交当前回跳地址？')) return;
+      submitOauthRedirect();
+    });
+    cancelOauthLoginBtn.addEventListener('click', () => {
+      if (!confirmAction('确认取消当前 OpenAI OAuth 登录流程？')) return;
+      cancelOauthLogin();
+    });
+    copyOauthLoginUrlBtn.addEventListener('click', async () => {
+      try {
+        await copyTextToClipboard(oauthLoginUrlInput.value.trim());
+        setStatusBadge(true, '登录链接已复制');
+      } catch (error) {
+        setStatusBadge(false, '复制登录链接失败');
+        setLog(String(error));
+      }
+    });
+    openOauthLoginUrlBtn.addEventListener('click', () => {
+      const url = oauthLoginUrlInput.value.trim();
+      if (!url) {
+        setStatusBadge(false, '登录链接未生成');
+        return;
+      }
+      window.open(url, '_blank', 'noopener,noreferrer');
+    });
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      if (!confirmAction('确认退出登录？')) return;
+      logoutPanel();
+    });
+    channelPlatformInput.addEventListener('change', updateChannelFormSections);
+    wecomModeInput.addEventListener('change', updateChannelFormSections);
+    feishuConnectionModeInput.addEventListener('change', updateChannelFormSections);
+    agentIdInput.addEventListener('input', () => {
+      if (currentAgentKey) return;
+      if (!agentNameInput.value.trim()) {
+        agentNameInput.value = agentIdInput.value.trim();
+      }
+    });
+    closeProviderModalBtn.addEventListener('click', closeProviderModal);
+    closeOauthLoginModalBtn.addEventListener('click', closeOauthLoginModal);
+    closeProviderRefreshDiffModalBtn.addEventListener('click', closeProviderRefreshDiffModal);
+    closeCcswitchImportModalBtn.addEventListener('click', closeCcswitchImportModal);
+    closeAgentModalBtn.addEventListener('click', closeAgentModal);
+    closeChannelModalBtn.addEventListener('click', closeChannelModal);
+    oauthLoginModalBackdrop.addEventListener('click', (event) => {
+      if (event.target === oauthLoginModalBackdrop) {
+        closeOauthLoginModal();
+      }
+    });
+    providerModalBackdrop.addEventListener('click', (event) => {
+      if (event.target === providerModalBackdrop) {
+        closeProviderModal();
+      }
+    });
+    providerRefreshDiffModalBackdrop.addEventListener('click', (event) => {
+      if (event.target === providerRefreshDiffModalBackdrop) {
+        closeProviderRefreshDiffModal();
+      }
+    });
+    ccswitchImportModalBackdrop.addEventListener('click', (event) => {
+      if (event.target === ccswitchImportModalBackdrop) {
+        closeCcswitchImportModal();
+      }
+    });
+    agentModalBackdrop.addEventListener('click', (event) => {
+      if (event.target === agentModalBackdrop) {
+        closeAgentModal();
+      }
+    });
+    channelModalBackdrop.addEventListener('click', (event) => {
+      if (event.target === channelModalBackdrop) {
+        closeChannelModal();
+      }
+    });
+    window.addEventListener('hashchange', () => switchTab(currentTabFromHash(), false));
+
+    switchTab(currentTabFromHash(), false);
+    resetChannelForm();
+
+    loadStore()
+      .then(refreshCurrentSummary)
+      .then(loadStatus)
+      .then(loadSessions)
+      .catch((error) => {
+        setStatusBadge(false, '初始化失败');
+        setLog(String(error));
+      });
+
+    window.setInterval(() => {
+      loadSessions().catch(() => {});
+    }, 30000);
+  </script>
+</body>
+</html>

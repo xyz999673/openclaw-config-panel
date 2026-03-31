@@ -1,0 +1,2341 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Codex 控制台</title>
+  <script>
+    (() => {
+      const RECOVERY_FLAG = 'codex-console-runtime-recovery';
+      function shouldRecover(message) {
+        const text = String(message || '');
+        return /(jobBadge|attachmentBadge|threadCountBadge) is not defined/.test(text)
+          || /Unexpected end of input/.test(text);
+      }
+      function reloadOnce(reason) {
+        try {
+          if (sessionStorage.getItem(RECOVERY_FLAG) === reason) return;
+          sessionStorage.setItem(RECOVERY_FLAG, reason);
+        } catch (_) {}
+        const url = new URL(window.location.href);
+        url.searchParams.set('_cv', String(Date.now()));
+        window.location.replace(url.toString());
+      }
+      window.addEventListener('error', (event) => {
+        const message = String(event?.message || event?.error?.message || '');
+        if (shouldRecover(message)) reloadOnce('bootstrap-runtime-error');
+      }, true);
+      window.addEventListener('load', () => {
+        try { sessionStorage.removeItem(RECOVERY_FLAG); } catch (_) {}
+      }, { once: true });
+    })();
+  </script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07111f;
+      --panel: rgba(15, 23, 42, 0.84);
+      --panel-strong: rgba(15, 23, 42, 0.95);
+      --panel-soft: rgba(2, 6, 23, 0.48);
+      --border: rgba(148, 163, 184, 0.18);
+      --border-strong: rgba(96, 165, 250, 0.34);
+      --text: #e8eef9;
+      --muted: #94a9c6;
+      --blue: #60a5fa;
+      --blue-soft: rgba(96, 165, 250, 0.16);
+      --green: #34d399;
+      --danger: #f87171;
+      --shadow: 0 28px 80px rgba(2, 6, 23, 0.42);
+      --radius: 22px;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(59,130,246,.2), transparent 28%),
+        radial-gradient(circle at top right, rgba(52,211,153,.14), transparent 24%),
+        radial-gradient(circle at bottom, rgba(167,139,250,.1), transparent 28%),
+        var(--bg);
+    }
+    .shell {
+      min-height: 100dvh;
+      height: 100dvh;
+      display: grid;
+      grid-template-columns: 360px minmax(0, 1fr);
+      gap: 18px;
+      padding: 18px;
+    }
+    .sidebar, .main {
+      min-height: 0;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(15,23,42,.96), rgba(15,23,42,.82));
+      border-radius: 26px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .main {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      overflow: hidden;
+    }
+    .section { padding: 18px 20px; }
+    .sidebar-head {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .title-row-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      flex: 0 0 auto;
+    }
+    h1 { margin: 0; font-size: 26px; }
+    .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+    .quick-links { display: flex; flex-wrap: wrap; gap: 8px; }
+    .quick-links a, button, .upload-label {
+      border: 1px solid rgba(148,163,184,.2);
+      background: rgba(148,163,184,.12);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 10px 14px;
+      font: inherit;
+      cursor: pointer;
+      text-decoration: none;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform .14s ease, border-color .14s ease, background .14s ease;
+    }
+    button:hover, .upload-label:hover, .quick-links a:hover { transform: translateY(-1px); border-color: rgba(96,165,250,.36); }
+    .icon-btn {
+      min-width: 44px;
+      padding: 10px 12px;
+      border-radius: 14px;
+    }
+    .primary {
+      background: linear-gradient(90deg, #2563eb, #38bdf8);
+      color: #fff;
+      border: none;
+      font-weight: 700;
+    }
+    .danger { color: #fecaca; border-color: rgba(248,113,113,.24); background: rgba(248,113,113,.14); }
+    .field { display: flex; flex-direction: column; gap: 8px; }
+    .field label { font-size: 12px; color: var(--muted); }
+    .field input, .composer textarea {
+      width: 100%;
+      border: 1px solid rgba(148,163,184,.18);
+      background: rgba(2,6,23,.4);
+      color: var(--text);
+      border-radius: 16px;
+      padding: 12px 14px;
+      font: inherit;
+    }
+    .field input:focus, .composer textarea:focus {
+      outline: none;
+      border-color: rgba(96,165,250,.84);
+      box-shadow: 0 0 0 3px rgba(96,165,250,.14);
+    }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .thread-toolbar { display: flex; gap: 10px; }
+    .thread-toolbar > * { flex: 1; }
+    .thread-list {
+      min-height: 0;
+      overflow: auto;
+      padding: 16px 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .thread-item {
+      width: 100%;
+      text-align: left;
+      background: rgba(15,23,42,.62);
+      border: 1px solid rgba(148,163,184,.14);
+      border-radius: 18px;
+      padding: 8px;
+      min-height: auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+    }
+    .thread-item.active {
+      border-color: rgba(96,165,250,.46);
+      background: rgba(37,99,235,.14);
+      box-shadow: inset 0 0 0 1px rgba(96,165,250,.22);
+    }
+    .thread-item.running { border-color: rgba(52,211,153,.34); }
+    .thread-open-btn {
+      min-width: 0;
+      width: 100%;
+      border: none;
+      background: transparent;
+      color: inherit;
+      text-align: left;
+      padding: 8px 10px;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+    .thread-open-btn:hover {
+      background: rgba(255,255,255,.04);
+    }
+    .thread-title {
+      display: block;
+      font-size: 14px;
+      font-weight: 700;
+      min-width: 0;
+    }
+    .thread-title-text {
+      display: block;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      border: 1px solid rgba(148,163,184,.16);
+      background: rgba(148,163,184,.1);
+      color: #dbe7f8;
+    }
+    .badge.running { border-color: rgba(52,211,153,.24); background: rgba(52,211,153,.14); color: #d1fae5; }
+    .thread-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: nowrap;
+    }
+    .thread-action-btn {
+      flex: 0 0 auto;
+      min-width: auto;
+      padding: 8px 10px;
+      border-radius: 12px;
+      white-space: nowrap;
+    }
+    .mobile-head-row,
+    .mobile-close-btn,
+    .mobile-backdrop {
+      display: none;
+    }
+    .mobile-head-copy {
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+    .mobile-head-title {
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.35;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .mobile-head-meta {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.35;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .main-head {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-start;
+      gap: 14px;
+    }
+    .main-title { min-width: 0; }
+    .main-title h2 { margin: 0; font-size: 24px; }
+    .main-title .meta { margin-top: 6px; color: var(--muted); font-size: 13px; }
+    .messages {
+      min-height: 0;
+      overflow: auto;
+      padding: 18px 20px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overscroll-behavior: contain;
+      background: linear-gradient(180deg, rgba(2,6,23,.12), rgba(2,6,23,.22));
+    }
+    .hint {
+      flex: 0 0 auto;
+      color: var(--muted);
+      font-size: 13px;
+      border: 1px dashed rgba(148,163,184,.18);
+      border-radius: 16px;
+      padding: 14px;
+      background: rgba(2,6,23,.22);
+    }
+    .message {
+      flex: 0 0 auto;
+      max-width: min(840px, 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 16px 18px;
+      border-radius: 20px;
+      border: 1px solid rgba(148,163,184,.14);
+      background: rgba(15,23,42,.74);
+    }
+    .message.user {
+      align-self: flex-end;
+      background: linear-gradient(180deg, rgba(37,99,235,.3), rgba(37,99,235,.18));
+      border-color: rgba(96,165,250,.3);
+    }
+    .message.assistant {
+      align-self: flex-start;
+      background: rgba(15,23,42,.78);
+    }
+    .message-role { color: var(--muted); font-size: 12px; }
+    .message-text { white-space: pre-wrap; line-height: 1.75; font-size: 14px; }
+    .markdown > * { margin: 0 0 12px; }
+    .markdown > *:last-child { margin-bottom: 0; }
+    .markdown code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: rgba(148,163,184,.15); padding: 2px 6px; border-radius: 8px; }
+    .markdown pre { margin: 0; background: rgba(2,6,23,.62); border-radius: 16px; padding: 14px; overflow: auto; border: 1px solid rgba(148,163,184,.12); }
+    .markdown pre code { background: transparent; padding: 0; }
+    .markdown blockquote { margin: 0; padding-left: 14px; border-left: 3px solid rgba(96,165,250,.46); color: #d6e4f8; }
+    .markdown a { color: #93c5fd; }
+    .attachments { display: flex; flex-wrap: wrap; gap: 10px; }
+    .attachment-image {
+      width: 148px;
+      min-height: auto;
+      border: 1px solid rgba(148,163,184,.16);
+      border-radius: 16px;
+      overflow: hidden;
+      padding: 0;
+      background: rgba(2,6,23,.42);
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: flex-start;
+      text-align: left;
+    }
+    .attachment-image .thumb {
+      width: 100%;
+      aspect-ratio: 1.18;
+      background: rgba(15,23,42,.76);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .attachment-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .attachment-image .name {
+      padding: 10px 12px;
+      font-size: 12px;
+      color: #d7e3f7;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .attachment-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid rgba(148,163,184,.18);
+      background: rgba(148,163,184,.1);
+      border-radius: 999px;
+      padding: 8px 12px;
+      color: #d8e4f8;
+      text-decoration: none;
+      font-size: 12px;
+    }
+    .process {
+      flex: 0 0 auto;
+      align-self: stretch;
+      border: 1px solid rgba(148,163,184,.14);
+      background: rgba(2,6,23,.36);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .process-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-height: 34px;
+      padding: 6px 10px;
+      background: rgba(15,23,42,.44);
+    }
+    .process-meta {
+      min-width: 0;
+      flex: 1 1 auto;
+      display: block;
+    }
+    .process-main {
+      display: none;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .process-sub {
+      display: block;
+      font-size: 11px;
+      color: #d9e6f8;
+      line-height: 1.35;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .live-process-list {
+      flex: 0 0 auto;
+      width: min(100%, 840px);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .process-toggle {
+      flex: 0 0 auto;
+      min-height: 22px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      line-height: 1;
+      background: rgba(30,41,59,.88);
+      border-color: rgba(148,163,184,.22);
+    }
+    .process-body { padding: 10px 12px 12px; }
+    .process-body.hidden { display: none; }
+    .md-separator {
+      color: var(--muted);
+      letter-spacing: .24em;
+      user-select: none;
+    }
+    .command-box {
+      border-radius: 14px;
+      border: 1px solid rgba(148,163,184,.12);
+      background: rgba(2,6,23,.5);
+      padding: 12px;
+      font-size: 13px;
+      line-height: 1.65;
+    }
+    .command-box pre {
+      margin: 10px 0 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: #d8e4f6;
+    }
+    .history-loader {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border: 1px dashed rgba(148,163,184,.18);
+      border-radius: 16px;
+      padding: 12px 14px;
+      background: rgba(2,6,23,.2);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .composer-wrap {
+      border-top: 1px solid var(--border);
+      padding: 16px 20px 18px;
+      background: rgba(15,23,42,.86);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .pending-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+    .pending-item {
+      position: relative;
+      width: 116px;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(148,163,184,.16);
+      background: rgba(2,6,23,.44);
+    }
+    .pending-item img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
+    .pending-file {
+      width: 100%; aspect-ratio: 1;
+      display: flex; align-items: center; justify-content: center;
+      color: #d7e3f7; font-size: 13px;
+      background: rgba(15,23,42,.72);
+    }
+    .pending-name { padding: 8px 10px 12px; font-size: 12px; color: #d7e3f7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pending-remove {
+      position: absolute;
+      top: 8px; right: 8px;
+      width: 26px; height: 26px;
+      border-radius: 50%; border: none;
+      background: rgba(2,6,23,.78);
+      color: #fff; padding: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .composer textarea {
+      min-height: 116px;
+      max-height: 240px;
+      resize: vertical;
+    }
+    .composer-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .status-line { color: var(--muted); font-size: 13px; min-height: 20px; }
+    .status-line.error { color: var(--danger); }
+    .status-line.ok { color: var(--green); }
+    #fileInput { display: none; }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(2,6,23,.78);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 20;
+    }
+    .modal-backdrop.hidden { display: none; }
+    .modal {
+      width: min(92vw, 1100px);
+      max-height: 92vh;
+      overflow: hidden;
+      border-radius: 22px;
+      border: 1px solid var(--border);
+      background: rgba(15,23,42,.96);
+      box-shadow: var(--shadow);
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+    }
+    .modal-head, .modal-foot { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .modal-foot { border-bottom: none; border-top: 1px solid var(--border); color: var(--muted); font-size: 13px; }
+    .modal-body { min-height: 0; overflow: auto; display: flex; align-items: center; justify-content: center; background: rgba(2,6,23,.36); }
+    .modal-body img { max-width: 100%; max-height: 74vh; transform-origin: center center; }
+    .mobile-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(2,6,23,.64);
+      backdrop-filter: blur(2px);
+      z-index: 30;
+    }
+    .mobile-backdrop.hidden {
+      display: none;
+    }
+    @media (max-width: 1180px) {
+      html[data-layout="desktop"] .shell {
+        grid-template-columns: 320px minmax(0, 1fr);
+        gap: 14px;
+        padding: 14px;
+      }
+    }
+    @media (max-width: 767px) {
+      html[data-layout="mobile"] body {
+        overflow: hidden;
+      }
+      html[data-layout="mobile"] .shell {
+        display: block;
+        padding: 0;
+        min-height: 100dvh;
+        height: 100dvh;
+      }
+      html[data-layout="mobile"] .mobile-backdrop:not(.hidden) {
+        display: block;
+      }
+      html[data-layout="mobile"] .sidebar {
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: min(88vw, 360px);
+        max-width: 360px;
+        height: 100dvh;
+        z-index: 40;
+        transform: translateX(calc(-100% - 20px));
+        transition: transform .2s ease;
+        border-radius: 0 24px 24px 0;
+        border-left: none;
+      }
+      html[data-layout="mobile"] body.drawer-open .sidebar {
+        transform: translateX(0);
+      }
+      html[data-layout="mobile"] .sidebar-head {
+        padding-top: calc(18px + env(safe-area-inset-top));
+      }
+      html[data-layout="mobile"] .mobile-close-btn {
+        display: inline-flex;
+      }
+      html[data-layout="mobile"] .thread-toolbar {
+        flex-direction: column;
+      }
+      html[data-layout="mobile"] .main {
+        min-height: 100dvh;
+        height: 100dvh;
+        width: 100vw;
+        max-width: 100vw;
+        min-width: 0;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        backdrop-filter: none;
+        background: transparent;
+        grid-template-rows: auto auto minmax(0, 1fr) auto;
+        overflow-x: hidden;
+      }
+      html[data-layout="mobile"] .mobile-head-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        min-width: 0;
+        padding: calc(10px + env(safe-area-inset-top)) 14px 10px;
+        border-bottom: 1px solid var(--border);
+        background: linear-gradient(180deg, rgba(15,23,42,.96), rgba(15,23,42,.82));
+        overflow: hidden;
+      }
+      html[data-layout="mobile"] .mobile-head-row > * {
+        min-width: 0;
+      }
+      html[data-layout="mobile"] .mobile-head-copy {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+      html[data-layout="mobile"] #mobileSidebarBtn,
+      html[data-layout="mobile"] #mobileNewThreadBtn {
+        flex: 0 0 auto;
+        white-space: nowrap;
+        word-break: keep-all;
+        line-height: 1;
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+      html[data-layout="mobile"] .main-head {
+        padding: 8px 12px;
+        gap: 8px;
+        width: 100%;
+        min-width: 0;
+        flex-direction: column;
+        align-items: stretch;
+        overflow-x: hidden;
+      }
+      html[data-layout="mobile"] .main-title {
+        display: none;
+      }
+      html[data-layout="mobile"] .badge {
+        padding: 4px 9px;
+        font-size: 11px;
+        flex: 0 0 auto;
+      }
+      html[data-layout="mobile"] .messages {
+        width: 100%;
+        min-width: 0;
+        max-width: 100vw;
+        padding: 12px 12px 8px;
+        gap: 10px;
+        overflow-x: hidden;
+      }
+      html[data-layout="mobile"] .message {
+        max-width: 100%;
+        padding: 14px;
+        border-radius: 18px;
+      }
+      html[data-layout="mobile"] .message-role,
+      html[data-layout="mobile"] .process-sub,
+      html[data-layout="mobile"] .status-line,
+      html[data-layout="mobile"] .attachment-image .name,
+      html[data-layout="mobile"] .attachment-tag,
+      html[data-layout="mobile"] .command-box {
+        font-size: 12px;
+      }
+      html[data-layout="mobile"] .message-text {
+        font-size: 13px;
+        line-height: 1.65;
+      }
+      html[data-layout="mobile"] .attachments,
+      html[data-layout="mobile"] .pending-grid {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 2px;
+        -webkit-overflow-scrolling: touch;
+      }
+      html[data-layout="mobile"] .attachment-image {
+        width: 124px;
+        flex: 0 0 auto;
+      }
+      html[data-layout="mobile"] .attachment-tag {
+        flex: 0 0 auto;
+      }
+      html[data-layout="mobile"] .process {
+        border-radius: 12px;
+      }
+      html[data-layout="mobile"] .process-head {
+        min-height: 30px;
+        padding: 5px 8px;
+      }
+      html[data-layout="mobile"] .process-sub {
+        font-size: 10px;
+      }
+      html[data-layout="mobile"] .process-toggle {
+        min-height: 20px;
+        padding: 2px 7px;
+        font-size: 9px;
+      }
+      html[data-layout="mobile"] .history-loader {
+        width: 100%;
+        min-width: 0;
+        flex-direction: column;
+        align-items: stretch;
+      }
+      html[data-layout="mobile"] .composer-wrap {
+        width: 100%;
+        min-width: 0;
+        max-width: 100vw;
+        padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+        gap: 10px;
+        background: rgba(15,23,42,.94);
+        overflow-x: hidden;
+      }
+      html[data-layout="mobile"] .pending-item {
+        width: 96px;
+        flex: 0 0 96px;
+        border-radius: 14px;
+      }
+      html[data-layout="mobile"] .pending-name {
+        white-space: normal;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        min-height: 32px;
+      }
+      html[data-layout="mobile"] .composer textarea {
+        min-height: 54px;
+        max-height: 160px;
+        resize: none;
+      }
+      html[data-layout="mobile"] .composer-actions {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      html[data-layout="mobile"] .composer-actions .quick-links {
+        width: auto;
+        flex-wrap: nowrap;
+      }
+      html[data-layout="mobile"] .modal-backdrop {
+        padding: 0;
+      }
+      html[data-layout="mobile"] .modal {
+        width: 100vw;
+        height: 100dvh;
+        max-height: 100dvh;
+        border-radius: 0;
+        border: none;
+      }
+      html[data-layout="mobile"] .modal-head,
+      html[data-layout="mobile"] .modal-foot {
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+      html[data-layout="mobile"] .modal-head {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+      html[data-layout="mobile"] .modal-body img {
+        max-height: calc(100dvh - 170px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="section sidebar-head">
+        <div class="title-row">
+          <div>
+            <h1>Codex</h1>
+            <div class="sub">独立控制台</div>
+          </div>
+          <div class="title-row-actions">
+            <span class="badge" id="sessionBadge">未登录</span>
+            <button id="mobileCloseSidebarBtn" class="icon-btn mobile-close-btn" type="button" aria-label="关闭会话侧栏">✕</button>
+          </div>
+        </div>
+        <div class="quick-links">
+          <a href="__HOME_URL__">导航页</a>
+          <a href="__PANEL_URL__">面板</a>
+          <a href="__QL_URL__">青龙</a>
+        </div>
+        <div class="thread-toolbar">
+          <button id="newThreadBtn">新会话</button>
+          <button id="logoutBtn">登出</button>
+        </div>
+      </div>
+      <div class="thread-list" id="threadList"></div>
+    </aside>
+
+    <main class="main">
+      <div class="mobile-head-row">
+        <button id="mobileSidebarBtn" type="button">会话</button>
+        <div class="mobile-head-copy">
+          <div class="mobile-head-title" id="mobileThreadTitle">新会话</div>
+          <div class="mobile-head-meta" id="mobileThreadMeta">可直接开始一个新任务</div>
+        </div>
+        <button id="mobileNewThreadBtn" type="button" class="primary">新建</button>
+      </div>
+      <div class="main-head">
+        <div class="main-title">
+          <h2 id="threadTitle">新会话</h2>
+          <div class="meta" id="threadMeta">可直接开始一个新任务</div>
+        </div>
+      </div>
+      <div class="messages" id="messages"></div>
+      <div class="composer-wrap">
+        <div class="pending-grid" id="pendingGrid"></div>
+        <div class="composer">
+          <textarea id="promptInput" placeholder="回车发送，Shift + 回车换行；可直接粘贴图片或文件"></textarea>
+        </div>
+        <div class="composer-actions">
+          <div class="quick-links">
+            <label class="upload-label" for="fileInput">选择附件</label>
+            <input id="fileInput" type="file" multiple>
+            <button id="clearAttachmentsBtn">清空附件</button>
+          </div>
+          <div class="quick-links">
+            <button id="interruptBtn" class="danger" type="button">中断任务</button>
+            <button id="sendBtn" class="primary">发送</button>
+          </div>
+        </div>
+        <div class="status-line" id="statusLine"></div>
+      </div>
+    </main>
+  </div>
+  <div class="mobile-backdrop hidden" id="mobileBackdrop"></div>
+
+  <div class="modal-backdrop hidden" id="previewBackdrop">
+    <div class="modal">
+      <div class="modal-head">
+        <strong id="previewTitle">图片预览</strong>
+        <div class="quick-links">
+          <button id="previewPrevBtn">上一张</button>
+          <button id="previewNextBtn">下一张</button>
+          <button id="previewZoomOutBtn">缩小</button>
+          <button id="previewZoomResetBtn">100%</button>
+          <button id="previewZoomInBtn">放大</button>
+          <button id="previewCloseBtn">关闭</button>
+        </div>
+      </div>
+      <div class="modal-body"><img id="previewImg" alt="图片预览"></div>
+      <div class="modal-foot" id="previewMeta">-</div>
+    </div>
+  </div>
+
+  <script>
+    const BASE_PATH = '__BASE_PATH__';
+    const DEFAULT_WORKDIR = '/root';
+    const THREAD_PAGE_SIZE = 100;
+    const MAX_ATTACHMENTS = 6;
+    const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
+    const MOBILE_BREAKPOINT = 768;
+    const LAYOUT_OVERRIDE = new URLSearchParams(window.location.search).get('layout');
+    const LAYOUT_MEDIA = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+
+    const threadList = document.getElementById('threadList');
+    const newThreadBtn = document.getElementById('newThreadBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const mobileSidebarBtn = document.getElementById('mobileSidebarBtn');
+    const mobileNewThreadBtn = document.getElementById('mobileNewThreadBtn');
+    const mobileCloseSidebarBtn = document.getElementById('mobileCloseSidebarBtn');
+    const mobileThreadTitle = document.getElementById('mobileThreadTitle');
+    const mobileThreadMeta = document.getElementById('mobileThreadMeta');
+    const mobileBackdrop = document.getElementById('mobileBackdrop');
+    const sessionBadge = document.getElementById('sessionBadge');
+    const threadTitle = document.getElementById('threadTitle');
+    const threadMeta = document.getElementById('threadMeta');
+    const messages = document.getElementById('messages');
+    const promptInput = document.getElementById('promptInput');
+    const fileInput = document.getElementById('fileInput');
+    const pendingGrid = document.getElementById('pendingGrid');
+    const clearAttachmentsBtn = document.getElementById('clearAttachmentsBtn');
+    const interruptBtn = document.getElementById('interruptBtn');
+    const sendBtn = document.getElementById('sendBtn');
+    const statusLine = document.getElementById('statusLine');
+    const previewBackdrop = document.getElementById('previewBackdrop');
+    const previewTitle = document.getElementById('previewTitle');
+    const previewImg = document.getElementById('previewImg');
+    const previewMeta = document.getElementById('previewMeta');
+    const previewPrevBtn = document.getElementById('previewPrevBtn');
+    const previewNextBtn = document.getElementById('previewNextBtn');
+    const previewZoomOutBtn = document.getElementById('previewZoomOutBtn');
+    const previewZoomResetBtn = document.getElementById('previewZoomResetBtn');
+    const previewZoomInBtn = document.getElementById('previewZoomInBtn');
+    const previewCloseBtn = document.getElementById('previewCloseBtn');
+
+    let authState = { initialized: false, logged_in: false, username: null };
+    let threadsState = [];
+    let currentThreadId = '';
+    let currentThreadState = null;
+    let activeJobId = '';
+    let interruptInFlight = false;
+    let jobPollTimer = null;
+    let jobPollFailureCount = 0;
+    let threadLoadingOlder = false;
+    let currentWorkdir = DEFAULT_WORKDIR;
+    let currentModel = '';
+    let pendingAttachments = [];
+    const stoppingThreadIds = new Set();
+    const attachmentObjectUrlCache = new Map();
+    const attachmentObjectUrlPromiseCache = new Map();
+    const attachmentFallbackNodeMap = new WeakMap();
+    let attachmentVisibilityObserver = null;
+    let previewItems = [];
+    let previewIndex = 0;
+    let previewScale = 1;
+    let layoutMode = 'desktop';
+    const renderedMessageNodes = new Map();
+    const renderedMessageFingerprints = new Map();
+    let renderedThreadId = '';
+    let renderedMessageKeys = [];
+    let renderedHistoryLoaderKey = '';
+    let renderedHistoryLoaderNode = null;
+    let renderedEmptyStateKey = '';
+    let renderedEmptyStateNode = null;
+    let renderedActiveJobKey = '';
+    let renderedActiveJobNode = null;
+
+    function appPath(path) { return `${BASE_PATH}${path}`; }
+    function loginUrl() {
+      const next = encodeURIComponent(window.location.pathname + window.location.search + window.location.hash);
+      return appPath(`/login?next=${next}`);
+    }
+    function resolveLayoutMode() {
+      if (LAYOUT_OVERRIDE === 'mobile' || LAYOUT_OVERRIDE === 'desktop') return LAYOUT_OVERRIDE;
+      return LAYOUT_MEDIA.matches ? 'mobile' : 'desktop';
+    }
+    function isMobileLayout() {
+      return layoutMode === 'mobile';
+    }
+    function syncMobileDrawer() {
+      const open = isMobileLayout() && document.body.classList.contains('drawer-open');
+      mobileBackdrop.classList.toggle('hidden', !open);
+    }
+    function openSidebarDrawer() {
+      if (!isMobileLayout()) return;
+      document.body.classList.add('drawer-open');
+      syncMobileDrawer();
+    }
+    function closeSidebarDrawer() {
+      document.body.classList.remove('drawer-open');
+      syncMobileDrawer();
+    }
+    function resizePromptInput() {
+      const maxHeight = isMobileLayout() ? 160 : 240;
+      promptInput.style.height = 'auto';
+      promptInput.style.height = `${Math.min(promptInput.scrollHeight || 0, maxHeight)}px`;
+    }
+    function applyLayoutMode(mode = resolveLayoutMode()) {
+      layoutMode = mode === 'mobile' ? 'mobile' : 'desktop';
+      document.documentElement.dataset.layout = layoutMode;
+      if (!isMobileLayout()) {
+        closeSidebarDrawer();
+      } else {
+        syncMobileDrawer();
+      }
+      resizePromptInput();
+    }
+    function setStatus(message = '', type = '') {
+      statusLine.textContent = message;
+      statusLine.className = type ? `status-line ${type}` : 'status-line';
+    }
+    async function request(path, options = {}, redirectOnAuth = true) {
+      const response = await fetch(appPath(path), { cache: 'no-store', ...options });
+      const payload = await response.json().catch(() => ({ ok: false, error: '响应解析失败' }));
+      if ((response.status === 401 || response.status === 403) && redirectOnAuth) {
+        window.location.replace(loginUrl());
+        throw new Error('登录已失效，正在跳转。');
+      }
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.error || '请求失败');
+      }
+      return payload.data;
+    }
+    function formatDateTime(value) {
+      const ts = Number(value || 0);
+      if (!ts) return '-';
+      return new Date(ts * 1000).toLocaleString('zh-CN', { hour12: false });
+    }
+    function formatRelativeTime(value) {
+      const ts = Number(value || 0);
+      if (!ts) return '-';
+      const diff = Math.max(0, Math.floor(Date.now() / 1000 - ts));
+      if (diff < 60) return `${diff} 秒前`;
+      if (diff < 3600) return `${Math.floor(diff / 60)} 分钟前`;
+      if (diff < 86400) return `${Math.floor(diff / 3600)} 小时前`;
+      return `${Math.floor(diff / 86400)} 天前`;
+    }
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, (char) => {
+        if (char === '&') return '&amp;';
+        if (char === '<') return '&lt;';
+        if (char === '>') return '&gt;';
+        if (char === '"') return '&quot;';
+        return '&#39;';
+      });
+    }
+    function sanitizeMarkdownUrl(rawUrl) {
+      const value = String(rawUrl || '').trim();
+      if (!value) return '';
+      try {
+        const url = new URL(value, window.location.origin);
+        const protocol = String(url.protocol || '').toLowerCase();
+        if (protocol === 'http:' || protocol === 'https:' || protocol === 'mailto:') return url.href;
+      } catch (_) {}
+      return '';
+    }
+    function renderInlineMarkdown(source) {
+      const placeholders = [];
+      const stash = (html) => {
+        const token = `@@MD${placeholders.length}@@`;
+        placeholders.push(html);
+        return token;
+      };
+      let text = String(source || '');
+      text = text.replace(/`([^`]+)`/g, (_, code) => stash(`<code>${escapeHtml(code)}</code>`));
+      text = text.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, label, url) => {
+        const safeUrl = sanitizeMarkdownUrl(url);
+        return safeUrl ? stash(`<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noreferrer">${renderInlineMarkdown(label)}</a>`) : escapeHtml(label);
+      });
+      text = escapeHtml(text);
+      text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      text = text.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+      text = text.replace(/~~([^~]+)~~/g, '<del>$1</del>');
+      text = text.replace(/(^|[\s(>])\*([^*\n]+)\*(?=$|[\s),.!?:;<])/g, '$1<em>$2</em>');
+      text = text.replace(/(^|[\s(>])_([^_\n]+)_(?=$|[\s),.!?:;<])/g, '$1<em>$2</em>');
+      placeholders.forEach((html, index) => { text = text.replace(`@@MD${index}@@`, html); });
+      return text;
+    }
+    function renderMarkdownToHtml(source) {
+      const codeBlocks = [];
+      const stashCodeBlock = (html) => {
+        const token = `@@CODE${codeBlocks.length}@@`;
+        codeBlocks.push(html);
+        return token;
+      };
+      const isSeparatorLine = (value) => /^\s*[-_*]{3,}\s*$/.test(String(value || ''));
+      const text = String(source || '').replace(/\r\n?/g, '\n');
+      const withCodeBlocks = text.replace(/```([^\n`]*)\n?([\s\S]*?)```/g, (_, language, code) => {
+        const safeLanguage = String(language || '').trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '');
+        const className = safeLanguage ? ` class="language-${safeLanguage}"` : '';
+        return stashCodeBlock(`<pre><code${className}>${escapeHtml(String(code || '').replace(/\n$/, ''))}</code></pre>`);
+      });
+      const blocks = withCodeBlocks.split(/\n{2,}/).filter((item) => item.trim());
+      const rendered = blocks.map((block) => {
+        const trimmed = block.trim();
+        if (!trimmed) return '';
+        if (/^@@CODE\d+@@$/.test(trimmed)) return trimmed;
+        const headingMatch = trimmed.match(/^(#{1,6})\s+(.+)$/);
+        if (headingMatch && !trimmed.includes('\n')) {
+          const level = headingMatch[1].length;
+          return `<h${level}>${renderInlineMarkdown(headingMatch[2])}</h${level}>`;
+        }
+        const lines = trimmed.split('\n');
+        if (lines.every((line) => !line.trim() || isSeparatorLine(line))) {
+          return `<p><span class="md-separator">···</span></p>`;
+        }
+        if (lines.every((line) => !line.trim() || /^\s*>\s?/.test(line))) {
+          const body = lines.map((line) => line.replace(/^\s*>\s?/, '')).map((line) => renderInlineMarkdown(line)).join('<br>');
+          return `<blockquote>${body}</blockquote>`;
+        }
+        if (lines.every((line) => !line.trim() || /^\s*[-+*]\s+/.test(line))) {
+          const items = lines.filter((line) => line.trim()).map((line) => `<li>${renderInlineMarkdown(line.replace(/^\s*[-+*]\s+/, ''))}</li>`).join('');
+          return `<ul>${items}</ul>`;
+        }
+        if (lines.every((line) => !line.trim() || /^\s*\d+\.\s+/.test(line))) {
+          const items = lines.filter((line) => line.trim()).map((line) => `<li>${renderInlineMarkdown(line.replace(/^\s*\d+\.\s+/, ''))}</li>`).join('');
+          return `<ol>${items}</ol>`;
+        }
+        const filteredLines = lines.filter((line) => !isSeparatorLine(line));
+        if (!filteredLines.length) return '';
+        return `<p>${filteredLines.map((line) => renderInlineMarkdown(line)).join('<br>')}</p>`;
+      }).join('');
+      let html = rendered;
+      codeBlocks.forEach((blockHtml, index) => { html = html.replace(`@@CODE${index}@@`, blockHtml); });
+      if (html) return html;
+      return isSeparatorLine(String(source || '').trim())
+        ? `<p><span class="md-separator">···</span></p>`
+        : `<p>${renderInlineMarkdown(source || '')}</p>`;
+    }
+    function buildMessageText(textValue, markdown = false) {
+      const node = document.createElement('div');
+      node.className = markdown ? 'message-text markdown' : 'message-text';
+      if (markdown) node.innerHTML = renderMarkdownToHtml(textValue || '');
+      else node.textContent = textValue || '';
+      return node;
+    }
+    function normalizeMessageText(value) {
+      const text = String(value || '').replace(/<image\b[^>]*>\s*<\/image>\s*/giu, ' ').split('\n').filter((line) => !/^\s*<\/?image\b/iu.test(line)).join(' ');
+      return text.replace(/\s+/g, ' ').trim();
+    }
+    function normalizeThreadPreviewText(value) {
+      const text = normalizeMessageText(value);
+      return text.replace(/^命令执行中：/u, '命令：').replace(/^命令已完成：/u, '命令：').trim();
+    }
+    function messageHasImageMarkup(message) {
+      return /<image\b/iu.test(String(message?.text || ''));
+    }
+    function messageAttachmentCount(message) {
+      return Array.isArray(message?.attachments) ? message.attachments.length : 0;
+    }
+    function messageIdLooksLikeHistory(message) {
+      return String(message?.id || '').startsWith('hist_');
+    }
+    function messagesAreEquivalent(left, right) {
+      if (String(left?.role || '') !== String(right?.role || '')) return false;
+      if (String(left?.event_type || '') !== String(right?.event_type || '')) return false;
+      if (String(left?.role || '') === 'event' && String(left?.event_type || '') === 'command') return false;
+      const leftText = normalizeMessageText(left?.text || '');
+      const rightText = normalizeMessageText(right?.text || '');
+      if (!leftText || leftText !== rightText) return false;
+      const looksLikeStoreHistoryMirror = messageIdLooksLikeHistory(left) !== messageIdLooksLikeHistory(right);
+      const looksLikeImageMirror =
+        messageHasImageMarkup(left)
+        || messageHasImageMarkup(right)
+        || Boolean(messageAttachmentCount(left)) !== Boolean(messageAttachmentCount(right));
+      const leftCreated = Number(left?.created_at || 0);
+      const rightCreated = Number(right?.created_at || 0);
+      const allowedDelta = looksLikeStoreHistoryMirror || looksLikeImageMirror ? 15 : 3;
+      return !(leftCreated && rightCreated && Math.abs(leftCreated - rightCreated) > allowedDelta);
+    }
+    function messageSignature(message) {
+      const role = String(message?.role || '');
+      const eventType = String(message?.event_type || '');
+      if (role === 'event' && eventType === 'command') return '';
+      const text = normalizeMessageText(message?.text || '');
+      return text ? `${role}::${eventType}::${text}` : '';
+    }
+    function mergeEquivalentMessages(baseMessage, overlayMessage) {
+      const merged = { ...(baseMessage || {}), ...(overlayMessage || {}) };
+      const attachments = [];
+      const seen = new Set();
+      [...(baseMessage?.attachments || []), ...(overlayMessage?.attachments || [])].forEach((item) => {
+        const key = `${item?.kind || ''}::${item?.name || ''}::${item?.path || ''}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        attachments.push({ ...item });
+      });
+      if (attachments.length) merged.attachments = attachments;
+      const baseText = normalizeMessageText(baseMessage?.text || '');
+      const overlayText = normalizeMessageText(overlayMessage?.text || '');
+      if (baseText && overlayText === baseText) {
+        const baseRawText = String(baseMessage?.text || '');
+        const overlayRawText = String(overlayMessage?.text || '');
+        const baseHasImageMarkup = messageHasImageMarkup(baseMessage);
+        const overlayHasImageMarkup = messageHasImageMarkup(overlayMessage);
+        if (baseHasImageMarkup && !overlayHasImageMarkup) {
+          merged.text = overlayRawText || baseRawText;
+        } else if (!baseHasImageMarkup && overlayHasImageMarkup) {
+          merged.text = baseRawText || overlayRawText;
+        } else {
+          merged.text = overlayRawText || baseRawText;
+        }
+      }
+      const baseCreated = Number(baseMessage?.created_at || 0);
+      const overlayCreated = Number(overlayMessage?.created_at || 0);
+      merged.created_at = Math.min(baseCreated || overlayCreated || 0, overlayCreated || baseCreated || 0);
+      return merged;
+    }
+    function mergeMessageLists(existing = [], incoming = []) {
+      const merged = [];
+      const indexById = new Map();
+      const signatureIndex = new Map();
+      [...existing, ...incoming]
+        .filter((message) => message && typeof message === 'object')
+        .sort((left, right) => Number(left?.created_at || 0) - Number(right?.created_at || 0))
+        .forEach((message) => {
+          const messageId = String(message?.id || '').trim();
+          if (messageId && indexById.has(messageId)) {
+            const index = indexById.get(messageId);
+            merged[index] = { ...merged[index], ...message };
+            return;
+          }
+          let duplicateIndex = -1;
+          const signature = messageSignature(message);
+          if (signature && signatureIndex.has(signature)) {
+            const candidates = signatureIndex.get(signature) || [];
+            for (let i = candidates.length - 1; i >= 0; i -= 1) {
+              const index = candidates[i];
+              if (messagesAreEquivalent(merged[index], message)) {
+                duplicateIndex = index;
+                break;
+              }
+            }
+          }
+          if (duplicateIndex >= 0) {
+            merged[duplicateIndex] = mergeEquivalentMessages(merged[duplicateIndex], message);
+            const mergedId = String(merged[duplicateIndex]?.id || '').trim();
+            if (mergedId) indexById.set(mergedId, duplicateIndex);
+            if (messageId) indexById.set(messageId, duplicateIndex);
+            return;
+          }
+          merged.push({ ...message });
+          const nextIndex = merged.length - 1;
+          if (messageId) indexById.set(messageId, nextIndex);
+          if (signature) {
+            const list = signatureIndex.get(signature) || [];
+            list.push(nextIndex);
+            signatureIndex.set(signature, list);
+          }
+        });
+      merged.sort((left, right) => Number(left?.created_at || 0) - Number(right?.created_at || 0));
+      return merged;
+    }
+    function normalizeThreadPayload(payload) {
+      const thread = payload || {};
+      const rawList = Array.isArray(thread.messages) ? thread.messages : [];
+      const list = mergeMessageLists([], rawList);
+      const total = Number.isFinite(Number(thread.message_total)) ? Number(thread.message_total) : list.length;
+      const start = Number.isFinite(Number(thread.message_window_start)) ? Number(thread.message_window_start) : Math.max(0, total - list.length);
+      const end = Number.isFinite(Number(thread.message_window_end)) ? Number(thread.message_window_end) : Math.min(total, start + list.length);
+      return {
+        ...thread,
+        messages: list,
+        message_total: total,
+        message_window_start: Math.max(0, start),
+        message_window_end: Math.max(0, end),
+        message_loaded_count: Number.isFinite(Number(thread.message_loaded_count)) ? Number(thread.message_loaded_count) : list.length,
+        has_older_messages: Boolean(thread.has_older_messages || start > 0),
+        has_newer_messages: Boolean(thread.has_newer_messages || end < total),
+      };
+    }
+    function mergeThreadPayload(existing, incoming) {
+      const base = normalizeThreadPayload(existing || {});
+      const next = normalizeThreadPayload(incoming || {});
+      const mergedMessages = mergeMessageLists(base.messages, next.messages);
+      const starts = [base.message_window_start, next.message_window_start].filter((value) => Number.isFinite(Number(value)));
+      const total = Math.max(base.message_total || 0, next.message_total || 0, mergedMessages.length);
+      const start = starts.length ? Math.min(...starts.map((value) => Number(value) || 0)) : Math.max(0, total - mergedMessages.length);
+      return normalizeThreadPayload({
+        ...base,
+        ...next,
+        messages: mergedMessages,
+        message_total: total,
+        message_loaded_count: mergedMessages.length,
+        message_window_start: Math.max(0, Math.min(start, total)),
+        message_window_end: Math.min(total, Math.max(0, Math.min(start, total)) + mergedMessages.length),
+      });
+    }
+    function fileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(new Error(`读取文件失败：${file.name}`));
+        reader.readAsDataURL(file);
+      });
+    }
+    async function loadPendingFiles(files, append = false) {
+      const fileList = Array.from(files || []);
+      if (!fileList.length) {
+        if (!append) clearPendingFiles();
+        return;
+      }
+      const nextItems = append ? [...pendingAttachments] : [];
+      if (nextItems.length + fileList.length > MAX_ATTACHMENTS) throw new Error(`单次最多 ${MAX_ATTACHMENTS} 个附件。`);
+      for (const file of fileList) {
+        if ((file.size || 0) > MAX_ATTACHMENT_BYTES) throw new Error(`附件过大：${file.name}，单个不能超过 25MB。`);
+        const dataUrl = await fileToDataUrl(file);
+        const isImage = String(file.type || '').startsWith('image/');
+        nextItems.push({
+          name: file.name,
+          type: file.type || 'application/octet-stream',
+          kind: isImage ? 'image' : 'file',
+          preview: isImage ? dataUrl : '',
+          data: dataUrl.split(',')[1] || '',
+        });
+      }
+      pendingAttachments = nextItems;
+      renderPendingFiles();
+    }
+    function clearPendingFiles() {
+      pendingAttachments = [];
+      fileInput.value = '';
+      renderPendingFiles();
+    }
+    function removePendingFile(index) {
+      pendingAttachments = pendingAttachments.filter((_, itemIndex) => itemIndex !== index);
+      if (!pendingAttachments.length) fileInput.value = '';
+      renderPendingFiles();
+    }
+    function renderPendingFiles() {
+      pendingGrid.innerHTML = '';
+      clearAttachmentsBtn.disabled = !pendingAttachments.length;
+      pendingAttachments.forEach((item, index) => {
+        const card = document.createElement('div');
+        card.className = 'pending-item';
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'pending-remove';
+        removeBtn.textContent = '×';
+        removeBtn.addEventListener('click', () => removePendingFile(index));
+        if (item.kind === 'image' && item.preview) {
+          const image = document.createElement('img');
+          image.src = item.preview;
+          image.alt = item.name;
+          card.appendChild(image);
+        } else {
+          const fileBox = document.createElement('div');
+          fileBox.className = 'pending-file';
+          fileBox.textContent = '文件';
+          card.appendChild(fileBox);
+        }
+        const name = document.createElement('div');
+        name.className = 'pending-name';
+        name.textContent = item.name;
+        card.appendChild(removeBtn);
+        card.appendChild(name);
+        pendingGrid.appendChild(card);
+      });
+    }
+    function createProcessPanel(title, subtitle, children = [], expanded = false) {
+      const panel = document.createElement('div');
+      panel.className = 'process';
+      const head = document.createElement('div');
+      head.className = 'process-head';
+      const meta = document.createElement('div');
+      meta.className = 'process-meta';
+      const titleNode = document.createElement('div');
+      titleNode.className = 'process-main';
+      titleNode.textContent = title;
+      const subtitleNode = document.createElement('div');
+      subtitleNode.className = 'process-sub';
+      subtitleNode.textContent = subtitle || '处理中';
+      subtitleNode.title = subtitle || '处理中';
+      meta.appendChild(titleNode);
+      meta.appendChild(subtitleNode);
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'process-toggle';
+      const body = document.createElement('div');
+      body.className = expanded ? 'process-body' : 'process-body hidden';
+      children.forEach((child) => body.appendChild(child));
+      const sync = () => { toggle.textContent = body.classList.contains('hidden') ? '展开' : '收起'; };
+      toggle.addEventListener('click', () => { body.classList.toggle('hidden'); sync(); });
+      sync();
+      head.appendChild(meta);
+      head.appendChild(toggle);
+      panel.appendChild(head);
+      panel.appendChild(body);
+      return panel;
+    }
+    function buildCommandBox(command, output, exitCode) {
+      const box = document.createElement('div');
+      box.className = 'command-box';
+      box.innerHTML = `<div><strong>命令：</strong>${escapeHtml(command || '-')}</div>`;
+      const pre = document.createElement('pre');
+      pre.textContent = `${output || ''}${exitCode !== null && exitCode !== undefined ? `\n\nexit_code=${exitCode}` : ''}`;
+      box.appendChild(pre);
+      return box;
+    }
+    function buildAttachmentRequestUrl(path) {
+      const normalizedPath = String(path || '').trim();
+      return normalizedPath ? `${BASE_PATH}/api/codex/attachment?path=${encodeURIComponent(normalizedPath)}` : '';
+    }
+    function ensureAttachmentVisibilityObserver() {
+      if (attachmentVisibilityObserver || typeof IntersectionObserver === 'undefined') return;
+      attachmentVisibilityObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          const image = entry.target;
+          attachmentVisibilityObserver.unobserve(image);
+          const normalizedPath = String(image?.dataset?.attachmentPath || '').trim();
+          const fallbackNode = attachmentFallbackNodeMap.get(image);
+          loadAttachmentImageNow(image, normalizedPath, fallbackNode);
+        });
+      }, {
+        root: messages,
+        rootMargin: '320px 0px',
+        threshold: 0.01,
+      });
+    }
+    async function resolveAttachmentObjectUrl(path) {
+      const normalizedPath = String(path || '').trim();
+      if (!normalizedPath) return '';
+      if (attachmentObjectUrlCache.has(normalizedPath)) return attachmentObjectUrlCache.get(normalizedPath) || '';
+      if (!attachmentObjectUrlPromiseCache.has(normalizedPath)) {
+        const requestUrl = buildAttachmentRequestUrl(normalizedPath);
+        const promise = fetch(requestUrl, { credentials: 'same-origin' })
+          .then((response) => {
+            if (!response.ok) throw new Error(`附件加载失败：${response.status}`);
+            return response.blob();
+          })
+          .then((blob) => {
+            const objectUrl = URL.createObjectURL(blob);
+            attachmentObjectUrlCache.set(normalizedPath, objectUrl);
+            attachmentObjectUrlPromiseCache.delete(normalizedPath);
+            return objectUrl;
+          })
+          .catch((error) => {
+            attachmentObjectUrlPromiseCache.delete(normalizedPath);
+            throw error;
+          });
+        attachmentObjectUrlPromiseCache.set(normalizedPath, promise);
+      }
+      return await attachmentObjectUrlPromiseCache.get(normalizedPath);
+    }
+    function loadAttachmentImageNow(image, path, fallbackNode) {
+      const normalizedPath = String(path || '').trim();
+      if (!normalizedPath) {
+        if (fallbackNode) fallbackNode.textContent = '图片不可用';
+        return;
+      }
+      resolveAttachmentObjectUrl(normalizedPath)
+        .then((objectUrl) => {
+          if (image.dataset.attachmentPath !== normalizedPath) return;
+          image.src = objectUrl;
+        })
+        .catch(() => {
+          if (image.dataset.attachmentPath !== normalizedPath) return;
+          if (fallbackNode) fallbackNode.textContent = '图片不可用';
+        });
+    }
+    function getAttachmentDisplayUrl(path) {
+      const normalizedPath = String(path || '').trim();
+      return attachmentObjectUrlCache.get(normalizedPath) || buildAttachmentRequestUrl(normalizedPath);
+    }
+    function applyAttachmentImageSource(image, path, fallbackNode) {
+      const normalizedPath = String(path || '').trim();
+      if (!normalizedPath) {
+        if (fallbackNode) fallbackNode.textContent = '图片不可用';
+        return;
+      }
+      image.dataset.attachmentPath = normalizedPath;
+      const cachedUrl = attachmentObjectUrlCache.get(normalizedPath);
+      if (cachedUrl) {
+        image.src = cachedUrl;
+        return;
+      }
+      attachmentFallbackNodeMap.set(image, fallbackNode);
+      ensureAttachmentVisibilityObserver();
+      if (attachmentVisibilityObserver) {
+        attachmentVisibilityObserver.observe(image);
+        return;
+      }
+      loadAttachmentImageNow(image, normalizedPath, fallbackNode);
+    }
+    function buildAttachmentBox(attachments) {
+      const root = document.createElement('div');
+      root.className = 'attachments';
+      const imageItems = (attachments || []).map((attachment) => {
+        const kind = String(attachment?.kind || '').trim().toLowerCase();
+        const path = String(attachment?.path || '').trim();
+        return kind === 'image' && path ? { path, name: attachment?.name || '图片' } : null;
+      }).filter(Boolean);
+      (attachments || []).forEach((attachment) => {
+        const kind = String(attachment?.kind || '').trim().toLowerCase();
+        const path = String(attachment?.path || '').trim();
+        const url = buildAttachmentRequestUrl(path);
+        if (kind === 'image') {
+          const item = document.createElement(url ? 'button' : 'div');
+          item.className = 'attachment-image';
+          if (url) {
+            item.type = 'button';
+            const currentIndex = imageItems.findIndex((entry) => entry.path === path && entry.name === (attachment?.name || '图片'));
+            item.addEventListener('click', () => {
+              openPreview(
+                imageItems.map((entry) => ({ path: entry.path, name: entry.name })),
+                currentIndex >= 0 ? currentIndex : 0,
+              );
+            });
+          }
+          const thumb = document.createElement('div');
+          thumb.className = 'thumb';
+          if (url) {
+            const image = document.createElement('img');
+            image.alt = attachment?.name || '图片';
+            image.loading = 'lazy';
+            image.referrerPolicy = 'no-referrer';
+            image.addEventListener('error', () => { thumb.textContent = '图片不可用'; });
+            applyAttachmentImageSource(image, path, thumb);
+            thumb.appendChild(image);
+          } else {
+            thumb.textContent = '图片不可用';
+          }
+          const name = document.createElement('div');
+          name.className = 'name';
+          name.textContent = attachment?.name || '图片';
+          item.appendChild(thumb);
+          item.appendChild(name);
+          root.appendChild(item);
+          return;
+        }
+        const tag = document.createElement(url ? 'a' : 'div');
+        tag.className = 'attachment-tag';
+        tag.textContent = `${kind === 'file' ? '文件' : '附件'} · ${attachment?.name || '-'}`;
+        if (url) {
+          tag.href = url;
+          tag.target = '_blank';
+          tag.rel = 'noreferrer';
+        }
+        root.appendChild(tag);
+      });
+      return root;
+    }
+    function buildHistoryLoader(thread) {
+      const total = Number(thread?.message_total || 0);
+      const shown = (thread?.messages || []).length;
+      if (!threadLoadingOlder && !thread?.has_older_messages && shown >= total) return null;
+      const bar = document.createElement('div');
+      bar.className = 'history-loader';
+      const info = document.createElement('div');
+      info.textContent = threadLoadingOlder
+        ? `正在加载更早消息… 已显示 ${shown}/${total || shown} 条`
+        : `已显示 ${shown}/${total || shown} 条消息，继续上滑或点击按钮加载更早内容`;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = threadLoadingOlder ? '加载中…' : '加载更早消息';
+      button.disabled = threadLoadingOlder || !thread?.has_older_messages;
+      button.addEventListener('click', () => loadOlderMessages());
+      bar.appendChild(info);
+      bar.appendChild(button);
+      return bar;
+    }
+    function resetRenderedMessageState() {
+      renderedMessageNodes.clear();
+      renderedMessageFingerprints.clear();
+      renderedThreadId = '';
+      renderedMessageKeys = [];
+      renderedHistoryLoaderKey = '';
+      renderedHistoryLoaderNode = null;
+      renderedEmptyStateKey = '';
+      renderedEmptyStateNode = null;
+      renderedActiveJobKey = '';
+      renderedActiveJobNode = null;
+    }
+    function syncThreadHeader(thread) {
+      if (!thread) {
+        threadTitle.textContent = '新会话';
+        threadMeta.textContent = '可直接开始一个新任务';
+        mobileThreadTitle.textContent = '新会话';
+        mobileThreadMeta.textContent = '可直接开始一个新任务';
+        return;
+      }
+      const activeJob = thread.active_job || null;
+      threadTitle.textContent = thread.title || thread.id || '未命名会话';
+      threadMeta.textContent = `${thread.cwd || '-'} · ${thread.codex_thread_id || thread.id} · 更新于 ${formatDateTime(thread.updated_at)}`;
+      mobileThreadTitle.textContent = thread.title || thread.id || '未命名会话';
+      mobileThreadMeta.textContent = activeJob
+        ? `任务 ${activeJob.status || 'running'} · ${thread.cwd || '-'}`
+        : `${thread.cwd || '-'} · ${formatRelativeTime(thread.updated_at)}`;
+    }
+    function isActiveJobRunning(activeJob) {
+      return String(activeJob?.status || '').toLowerCase() === 'running';
+    }
+    function isThreadForceStopping(threadId) {
+      return stoppingThreadIds.has(String(threadId || '').trim());
+    }
+    function syncInterruptButton() {
+      const running = isActiveJobRunning(currentThreadState?.active_job);
+      interruptBtn.disabled = !running || interruptInFlight;
+      interruptBtn.textContent = interruptInFlight ? '中断中…' : '中断任务';
+    }
+    function messageRenderKey(message, index) {
+      const messageId = String(message?.id || '').trim();
+      if (messageId) return `id:${messageId}`;
+      const role = String(message?.role || '').trim();
+      const eventType = String(message?.event_type || '').trim();
+      const createdAt = String(message?.created_at ?? '').trim();
+      if (role === 'event' && eventType === 'command') {
+        return `event:${createdAt}:${String(message?.command || '').trim()}`;
+      }
+      if (createdAt) return `${role}:${eventType}:${createdAt}`;
+      const normalizedText = normalizeMessageText(message?.text || '');
+      return normalizedText
+        ? `${role}:${eventType}:${normalizedText.slice(0, 160)}:${index}`
+        : `${role}:${eventType}:${index}`;
+    }
+    function messageRenderFingerprint(message) {
+      return JSON.stringify({
+        role: String(message?.role || ''),
+        event_type: String(message?.event_type || ''),
+        text: String(message?.text || ''),
+        created_at: Number(message?.created_at || 0),
+        command: String(message?.command || ''),
+        output: String(message?.output || ''),
+        exit_code: message?.exit_code ?? null,
+        attachments: (message?.attachments || []).map((item) => `${item?.kind || ''}::${item?.name || ''}::${item?.path || ''}`),
+        commands: (message?.commands || []).map((entry) => ({
+          command: String(entry?.command || ''),
+          output: String(entry?.output || ''),
+          exit_code: entry?.exit_code ?? null,
+          status: String(entry?.status || ''),
+        })),
+      });
+    }
+    function historyLoaderRenderKey(thread) {
+      const total = Number(thread?.message_total || 0);
+      const shown = (thread?.messages || []).length;
+      if (!threadLoadingOlder && !thread?.has_older_messages && shown >= total) return '';
+      return JSON.stringify({
+        loading: threadLoadingOlder,
+        shown,
+        total,
+        has_older_messages: Boolean(thread?.has_older_messages),
+      });
+    }
+    function activeJobRenderKey(activeJob) {
+      if (!isActiveJobRunning(activeJob)) return '';
+      const recentCommands = (activeJob?.commands || [])
+        .slice(-4)
+        .map((entry) => ({
+          command: String(entry?.command || ''),
+          output: String(entry?.output || ''),
+          exit_code: entry?.exit_code ?? null,
+          status: String(entry?.status || ''),
+        }));
+      return JSON.stringify({
+        status: String(activeJob?.status || ''),
+        last_event_text: String(activeJob?.last_event_text || ''),
+        assistant_text: String(activeJob?.assistant_text || ''),
+        commands: recentCommands,
+      });
+    }
+    function compareRenderedMessageKeys(previousKeys, nextKeys) {
+      if (previousKeys.length === nextKeys.length && previousKeys.every((key, index) => key === nextKeys[index])) {
+        return { mode: 'same', delta: 0 };
+      }
+      if (nextKeys.length > previousKeys.length && previousKeys.every((key, index) => key === nextKeys[index])) {
+        return { mode: 'append', delta: nextKeys.length - previousKeys.length };
+      }
+      if (nextKeys.length > previousKeys.length && previousKeys.every((key, index) => key === nextKeys[nextKeys.length - previousKeys.length + index])) {
+        return { mode: 'prepend', delta: nextKeys.length - previousKeys.length };
+      }
+      return { mode: 'full', delta: nextKeys.length };
+    }
+    function buildThreadMessageNode(message) {
+      const attachments = message.attachments || [];
+      if (message.role === 'event') {
+        const children = [];
+        if (attachments.length) children.push(buildAttachmentBox(attachments));
+        if (message.event_type === 'command') {
+          children.push(buildCommandBox(message.command, message.output, message.exit_code));
+        } else if (message.text) {
+          children.push(buildMessageText(message.text, false));
+        }
+        return createProcessPanel(
+          message.event_type === 'command' ? '命令过程' : '过程信息',
+          `${formatDateTime(message.created_at)} · ${message.text || '处理中'}`,
+          children,
+          false,
+        );
+      }
+      const card = document.createElement('div');
+      card.className = `message ${message.role === 'user' ? 'user' : 'assistant'}`;
+      const role = document.createElement('div');
+      role.className = 'message-role';
+      role.textContent = `${message.role === 'user' ? '你' : 'Codex'} · ${formatDateTime(message.created_at)}`;
+      card.appendChild(role);
+      card.appendChild(buildMessageText(message.text || '', message.role === 'assistant'));
+      if (attachments.length) card.appendChild(buildAttachmentBox(attachments));
+      (message.commands || []).forEach((entry) => {
+        card.appendChild(createProcessPanel('命令输出', entry.command || '-', [buildCommandBox(entry.command, entry.output, entry.exit_code)], false));
+      });
+      return card;
+    }
+    function buildActiveJobNode(activeJob) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'live-process-list';
+      const liveAssistantText = String(activeJob?.assistant_text || '').trim();
+      if (liveAssistantText) {
+        wrapper.appendChild(createProcessPanel(
+          'Codex 回复',
+          '回复生成中',
+          [buildMessageText(liveAssistantText, true)],
+          false,
+        ));
+      }
+      const recentCommands = (activeJob?.commands || []).slice(-4);
+      if (recentCommands.length) {
+        recentCommands.forEach((entry) => {
+          const commandStatus = String(entry?.status || '').toLowerCase();
+          const statusLabel = commandStatus === 'running' ? '命令执行中' : '命令已完成';
+          wrapper.appendChild(createProcessPanel(
+            '命令过程',
+            `${statusLabel}：${entry.command || '-'}`,
+            [buildCommandBox(entry.command, entry.output, entry.exit_code)],
+            false,
+          ));
+        });
+      }
+      if (!liveAssistantText && !recentCommands.length) {
+        wrapper.appendChild(createProcessPanel(
+          '过程信息',
+          activeJob?.last_event_text || 'Codex 正在处理，请稍候…',
+          [buildMessageText(activeJob?.last_event_text || 'Codex 正在处理，请稍候…', false)],
+          false,
+        ));
+      }
+      return wrapper;
+    }
+    function clearEmptyStateNode() {
+      if (renderedEmptyStateNode?.parentNode === messages) {
+        renderedEmptyStateNode.remove();
+      }
+      renderedEmptyStateNode = null;
+      renderedEmptyStateKey = '';
+    }
+    function ensureEmptyStateNode(key, text) {
+      const anchor = renderedActiveJobNode?.parentNode === messages ? renderedActiveJobNode : null;
+      if (renderedEmptyStateNode && renderedEmptyStateKey === key && renderedEmptyStateNode.textContent === text) {
+        if (renderedEmptyStateNode.parentNode !== messages) {
+          messages.insertBefore(renderedEmptyStateNode, anchor);
+        }
+        return;
+      }
+      const nextNode = document.createElement('div');
+      nextNode.className = 'hint';
+      nextNode.textContent = text;
+      if (renderedEmptyStateNode?.parentNode === messages) {
+        messages.replaceChild(nextNode, renderedEmptyStateNode);
+      } else {
+        messages.insertBefore(nextNode, anchor);
+      }
+      renderedEmptyStateNode = nextNode;
+      renderedEmptyStateKey = key;
+    }
+    function syncHistoryLoaderNode(thread) {
+      const nextKey = historyLoaderRenderKey(thread);
+      if (!nextKey) {
+        if (renderedHistoryLoaderNode?.parentNode === messages) {
+          renderedHistoryLoaderNode.remove();
+        }
+        renderedHistoryLoaderNode = null;
+        renderedHistoryLoaderKey = '';
+        return;
+      }
+      if (renderedHistoryLoaderNode && renderedHistoryLoaderKey === nextKey) return;
+      const nextNode = buildHistoryLoader(thread);
+      if (!nextNode) {
+        if (renderedHistoryLoaderNode?.parentNode === messages) {
+          renderedHistoryLoaderNode.remove();
+        }
+        renderedHistoryLoaderNode = null;
+        renderedHistoryLoaderKey = '';
+        return;
+      }
+      if (renderedHistoryLoaderNode?.parentNode === messages) {
+        messages.replaceChild(nextNode, renderedHistoryLoaderNode);
+      } else {
+        messages.insertBefore(nextNode, messages.firstChild);
+      }
+      renderedHistoryLoaderNode = nextNode;
+      renderedHistoryLoaderKey = nextKey;
+    }
+    function syncActiveJobNode(activeJob) {
+      const nextKey = activeJobRenderKey(activeJob);
+      if (!nextKey) {
+        if (renderedActiveJobNode?.parentNode === messages) {
+          renderedActiveJobNode.remove();
+        }
+        renderedActiveJobNode = null;
+        renderedActiveJobKey = '';
+        return;
+      }
+      if (renderedActiveJobNode && renderedActiveJobKey === nextKey) return;
+      const nextNode = buildActiveJobNode(activeJob);
+      if (renderedActiveJobNode?.parentNode === messages) {
+        messages.replaceChild(nextNode, renderedActiveJobNode);
+      } else {
+        messages.appendChild(nextNode);
+      }
+      renderedActiveJobNode = nextNode;
+      renderedActiveJobKey = nextKey;
+    }
+    function updateRenderedMessageNode(item) {
+      const currentNode = renderedMessageNodes.get(item.key);
+      if (!currentNode) return;
+      const currentFingerprint = renderedMessageFingerprints.get(item.key);
+      if (currentFingerprint === item.fingerprint) return;
+      const nextNode = buildThreadMessageNode(item.message);
+      nextNode.dataset.messageKey = item.key;
+      if (currentNode.parentNode === messages) {
+        messages.replaceChild(nextNode, currentNode);
+      }
+      renderedMessageNodes.set(item.key, nextNode);
+      renderedMessageFingerprints.set(item.key, item.fingerprint);
+    }
+    function appendRenderedMessageItems(items) {
+      if (!items.length) return;
+      const anchor = renderedActiveJobNode?.parentNode === messages
+        ? renderedActiveJobNode
+        : renderedEmptyStateNode?.parentNode === messages
+          ? renderedEmptyStateNode
+          : null;
+      items.forEach((item) => {
+        const node = buildThreadMessageNode(item.message);
+        node.dataset.messageKey = item.key;
+        messages.insertBefore(node, anchor);
+        renderedMessageNodes.set(item.key, node);
+        renderedMessageFingerprints.set(item.key, item.fingerprint);
+      });
+    }
+    function prependRenderedMessageItems(items) {
+      if (!items.length) return;
+      let anchor = null;
+      for (const key of renderedMessageKeys) {
+        const node = renderedMessageNodes.get(key);
+        if (node?.parentNode === messages) {
+          anchor = node;
+          break;
+        }
+      }
+      if (!anchor) {
+        anchor = renderedActiveJobNode?.parentNode === messages
+          ? renderedActiveJobNode
+          : renderedEmptyStateNode?.parentNode === messages
+            ? renderedEmptyStateNode
+            : null;
+      }
+      items.forEach((item) => {
+        const node = buildThreadMessageNode(item.message);
+        node.dataset.messageKey = item.key;
+        messages.insertBefore(node, anchor);
+        renderedMessageNodes.set(item.key, node);
+        renderedMessageFingerprints.set(item.key, item.fingerprint);
+      });
+    }
+    function renderMessagesFull(thread, items) {
+      messages.innerHTML = '';
+      resetRenderedMessageState();
+      renderedThreadId = thread?.id || currentThreadId || '';
+      syncHistoryLoaderNode(thread);
+      items.forEach((item) => {
+        const node = buildThreadMessageNode(item.message);
+        node.dataset.messageKey = item.key;
+        messages.appendChild(node);
+        renderedMessageNodes.set(item.key, node);
+        renderedMessageFingerprints.set(item.key, item.fingerprint);
+      });
+      renderedMessageKeys = items.map((item) => item.key);
+      syncActiveJobNode(thread?.active_job || null);
+      if (!items.length && !isActiveJobRunning(thread?.active_job)) {
+        ensureEmptyStateNode('thread-empty', '当前会话暂无消息。');
+      }
+    }
+    function renderThreads() {
+      threadList.innerHTML = '';
+      if (!threadsState.length) {
+        threadList.innerHTML = '<div class="hint">暂无会话。</div>';
+        return;
+      }
+      threadsState.forEach((thread) => {
+        const item = document.createElement('div');
+        item.className = `thread-item${thread.id === currentThreadId ? ' active' : ''}${thread.active_job ? ' running' : ''}`;
+        const hasRunningJob = isActiveJobRunning(thread.active_job);
+        const stopping = isThreadForceStopping(thread.id);
+        const openBtn = document.createElement('button');
+        openBtn.type = 'button';
+        openBtn.className = 'thread-open-btn';
+        openBtn.innerHTML = `
+          <div class="thread-title">
+            <span class="thread-title-text" title="${escapeHtml(thread.title || thread.id)}">${escapeHtml(thread.title || thread.id)}</span>
+          </div>
+        `;
+        openBtn.addEventListener('click', async () => {
+          if (isMobileLayout()) closeSidebarDrawer();
+          try {
+            await openThread(thread.id);
+          } catch (error) {
+            setStatus(String(error), 'error');
+          }
+        });
+        const actions = document.createElement('div');
+        actions.className = 'thread-actions';
+        if (hasRunningJob) {
+          const stopBtn = document.createElement('button');
+          stopBtn.type = 'button';
+          stopBtn.className = 'danger thread-action-btn';
+          stopBtn.textContent = stopping ? '强停中…' : '强停';
+          stopBtn.title = '强制停止此会话当前运行中的 Codex 任务';
+          stopBtn.disabled = stopping;
+          stopBtn.addEventListener('click', async (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            try {
+              await forceStopThread(thread.id, thread.active_job?.id || '');
+            } catch (error) {
+              setStatus(String(error), 'error');
+            }
+          });
+          actions.appendChild(stopBtn);
+        }
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'danger thread-action-btn';
+        deleteBtn.textContent = '删除';
+        deleteBtn.disabled = hasRunningJob || stopping;
+        deleteBtn.addEventListener('click', async (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          try {
+            await deleteThread(thread.id);
+          } catch (error) {
+            setStatus(String(error), 'error');
+          }
+        });
+        actions.appendChild(deleteBtn);
+        item.appendChild(openBtn);
+        item.appendChild(actions);
+        threadList.appendChild(item);
+      });
+    }
+    function isNearBottom(threshold = 120) {
+      return (messages.scrollHeight - messages.clientHeight - messages.scrollTop) <= threshold;
+    }
+    function renderMessages(options = {}) {
+      try {
+        syncInterruptButton();
+        const stickToBottom = options.stickToBottom !== false;
+        const preserveScroll = options.preserveScroll !== false;
+        const previousScrollTop = messages.scrollTop;
+        if (!currentThreadState) {
+          syncThreadHeader(null);
+          messages.innerHTML = '';
+          resetRenderedMessageState();
+          ensureEmptyStateNode('draft', '当前未选中历史会话。直接发送消息即可创建新会话。');
+          if (stickToBottom) {
+            messages.scrollTop = messages.scrollHeight;
+          } else if (preserveScroll) {
+            const maxScrollTop = Math.max(0, messages.scrollHeight - messages.clientHeight);
+            messages.scrollTop = Math.min(previousScrollTop, maxScrollTop);
+          }
+          return;
+        }
+        const thread = currentThreadState;
+        const threadKey = thread.id || currentThreadId || '';
+        const items = (thread.messages || []).map((message, index) => ({
+          key: messageRenderKey(message, index),
+          fingerprint: messageRenderFingerprint(message),
+          message,
+        }));
+        const nextKeys = items.map((item) => item.key);
+        const diff = (!renderedThreadId || renderedThreadId !== threadKey || options.forceFull)
+          ? { mode: 'full', delta: nextKeys.length }
+          : compareRenderedMessageKeys(renderedMessageKeys, nextKeys);
+        syncThreadHeader(thread);
+        if (diff.mode === 'full') {
+          renderMessagesFull(thread, items);
+        } else {
+          syncHistoryLoaderNode(thread);
+          if (items.length || isActiveJobRunning(thread.active_job)) {
+            clearEmptyStateNode();
+          }
+          if (diff.mode === 'prepend') {
+            prependRenderedMessageItems(items.slice(0, diff.delta));
+            items.slice(diff.delta).forEach((item) => updateRenderedMessageNode(item));
+          } else if (diff.mode === 'append') {
+            items.slice(0, renderedMessageKeys.length).forEach((item) => updateRenderedMessageNode(item));
+            appendRenderedMessageItems(items.slice(renderedMessageKeys.length));
+          } else {
+            items.forEach((item) => updateRenderedMessageNode(item));
+          }
+          renderedThreadId = threadKey;
+          renderedMessageKeys = nextKeys;
+          syncActiveJobNode(thread.active_job || null);
+          if (!items.length && !isActiveJobRunning(thread.active_job)) {
+            ensureEmptyStateNode('thread-empty', '当前会话暂无消息。');
+          }
+        }
+        if (stickToBottom) {
+          messages.scrollTop = messages.scrollHeight;
+        } else if (preserveScroll) {
+          const maxScrollTop = Math.max(0, messages.scrollHeight - messages.clientHeight);
+          messages.scrollTop = Math.min(previousScrollTop, maxScrollTop);
+        }
+      } catch (error) {
+        console.error(error);
+        setStatus(`消息渲染失败：${String(error)}`, 'error');
+        syncThreadHeader(currentThreadState || null);
+        messages.innerHTML = '<div class="hint">消息渲染失败，请刷新页面重试。</div>';
+        resetRenderedMessageState();
+      }
+    }
+    async function loadAuthState() {
+      authState = await request('/api/auth/state', {}, false);
+      if (!authState.logged_in) {
+        window.location.replace(loginUrl());
+        throw new Error('未登录');
+      }
+      sessionBadge.textContent = authState.username ? `已登录 · ${authState.username}` : '已登录';
+      sessionBadge.className = 'badge running';
+      return authState;
+    }
+    async function fetchThread(threadId, options = {}) {
+      const query = new URLSearchParams({ thread_id: threadId, limit: String(options.limit || THREAD_PAGE_SIZE) });
+      if (options.before !== undefined && options.before !== null && options.before !== '') query.set('before', String(options.before));
+      const payload = await request(`/api/codex/thread?${query.toString()}`);
+      return normalizeThreadPayload(payload);
+    }
+    async function loadThreads(preferredThreadId = '') {
+      const payload = await request('/api/codex/threads');
+      threadsState = payload.threads || [];
+      if (preferredThreadId) currentThreadId = preferredThreadId;
+      else if (currentThreadId && !threadsState.some((item) => item.id === currentThreadId)) currentThreadId = threadsState[0]?.id || '';
+      else if (!currentThreadId) currentThreadId = threadsState[0]?.id || '';
+      renderThreads();
+      if (currentThreadId) await openThread(currentThreadId, false);
+      else {
+        currentThreadState = null;
+        renderMessages();
+      }
+    }
+    async function openThread(threadId, renderList = true) {
+      if (!threadId) {
+        currentThreadId = '';
+        currentThreadState = null;
+        activeJobId = '';
+        threadLoadingOlder = false;
+        currentWorkdir = DEFAULT_WORKDIR;
+        renderMessages();
+        if (renderList) renderThreads();
+        stopJobPolling();
+        return;
+      }
+      currentThreadId = threadId;
+      threadLoadingOlder = false;
+      const payload = await fetchThread(threadId, { limit: THREAD_PAGE_SIZE });
+      currentThreadState = payload;
+      currentWorkdir = payload.cwd || currentWorkdir || DEFAULT_WORKDIR;
+      activeJobId = payload.active_job?.id || '';
+      if (renderList) renderThreads();
+      renderMessages();
+      if (activeJobId) startJobPolling(activeJobId, threadId);
+      else stopJobPolling();
+      syncInterruptButton();
+    }
+    async function loadOlderMessages() {
+      if (!currentThreadId || !currentThreadState?.has_older_messages || threadLoadingOlder) return;
+      const requestedThreadId = currentThreadId;
+      const before = Number(currentThreadState.message_window_start || 0);
+      if (before <= 0) return;
+      threadLoadingOlder = true;
+      const previousScrollHeight = messages.scrollHeight;
+      const previousScrollTop = messages.scrollTop;
+      try {
+        const payload = await fetchThread(requestedThreadId, { limit: THREAD_PAGE_SIZE, before });
+        if (currentThreadId !== requestedThreadId || payload.id !== requestedThreadId) {
+          threadLoadingOlder = false;
+          return;
+        }
+        currentThreadState = mergeThreadPayload(payload, currentThreadState);
+        threadLoadingOlder = false;
+        renderMessages({ stickToBottom: false, preserveScroll: false });
+        requestAnimationFrame(() => {
+          const nextScrollHeight = messages.scrollHeight;
+          messages.scrollTop = Math.max(0, nextScrollHeight - previousScrollHeight + previousScrollTop);
+        });
+      } catch (error) {
+        threadLoadingOlder = false;
+        renderMessages({ stickToBottom: false });
+        setStatus(String(error), 'error');
+      }
+    }
+    function stopJobPolling() {
+      if (jobPollTimer) {
+        clearTimeout(jobPollTimer);
+        jobPollTimer = null;
+      }
+      activeJobId = '';
+      jobPollFailureCount = 0;
+      syncInterruptButton();
+    }
+    async function pollJob(jobId, threadId) {
+      try {
+        const stickToBottom = isNearBottom();
+        const jobPayload = await request(`/api/codex/job?job_id=${encodeURIComponent(jobId)}`);
+        if (currentThreadId !== threadId) return;
+        if (currentThreadState) {
+          currentThreadState = {
+            ...currentThreadState,
+            updated_at: Math.max(Number(currentThreadState.updated_at || 0), Number(jobPayload.updated_at || 0)),
+            active_job: jobPayload,
+          };
+        }
+        activeJobId = String(jobPayload?.id || '');
+        jobPollFailureCount = 0;
+        renderMessages({ stickToBottom });
+        if (jobPayload.status === 'running') {
+          jobPollTimer = window.setTimeout(() => pollJob(jobId, threadId), 1000);
+          return;
+        }
+        stopJobPolling();
+        await loadThreads(threadId);
+      } catch (error) {
+        if (currentThreadId !== threadId || activeJobId !== jobId) {
+          stopJobPolling();
+          return;
+        }
+        jobPollFailureCount += 1;
+        const retryDelay = Math.min(8000, 1200 + jobPollFailureCount * 1000);
+        jobPollTimer = window.setTimeout(() => pollJob(jobId, threadId), retryDelay);
+        setStatus(`Codex 任务轮询失败，将自动重试：${String(error)}`, 'error');
+      }
+    }
+    function startJobPolling(jobId, threadId) {
+      stopJobPolling();
+      activeJobId = jobId;
+      jobPollFailureCount = 0;
+      syncInterruptButton();
+      jobPollTimer = window.setTimeout(() => pollJob(jobId, threadId), 700);
+    }
+    function startNewThreadDraft() {
+      currentThreadId = '';
+      currentThreadState = null;
+      stopJobPolling();
+      renderThreads();
+      renderMessages();
+      closeSidebarDrawer();
+      resizePromptInput();
+      promptInput.focus();
+      setStatus('已切换到新会话草稿。');
+    }
+    async function sendMessage() {
+      const prompt = promptInput.value.trim();
+      if (!prompt) throw new Error('请输入要发送给 Codex 的消息。');
+      sendBtn.disabled = true;
+      try {
+        const data = await request('/api/codex/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            thread_id: currentThreadId,
+            prompt,
+            cwd: String(currentWorkdir || DEFAULT_WORKDIR).trim() || DEFAULT_WORKDIR,
+            model: String(currentModel || '').trim(),
+            attachments: pendingAttachments.map((item) => ({ name: item.name, type: item.type, data: item.data, kind: item.kind })),
+          }),
+        });
+        promptInput.value = '';
+        resizePromptInput();
+        clearPendingFiles();
+        currentThreadId = data.thread_id;
+        await loadThreads(data.thread_id);
+        if (data.job?.id) startJobPolling(data.job.id, data.thread_id);
+        setStatus('消息已发送。', 'ok');
+      } finally {
+        sendBtn.disabled = false;
+        syncInterruptButton();
+      }
+    }
+    async function interruptCurrentJob() {
+      const threadId = String(currentThreadState?.id || currentThreadId || '').trim();
+      const jobId = String(currentThreadState?.active_job?.id || activeJobId || '').trim();
+      if (!threadId && !jobId) throw new Error('当前没有可中断的任务。');
+      interruptInFlight = true;
+      syncInterruptButton();
+      try {
+        const data = await request('/api/codex/job/cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ thread_id: threadId, job_id: jobId }),
+        });
+        stopJobPolling();
+        await loadThreads(String(data?.thread_id || threadId || '').trim());
+        setStatus('已中断当前任务。', 'ok');
+      } finally {
+        interruptInFlight = false;
+        syncInterruptButton();
+      }
+    }
+    async function forceStopThread(threadId, jobId = '') {
+      const targetThreadId = String(threadId || '').trim();
+      const targetJobId = String(jobId || '').trim();
+      if (!targetThreadId && !targetJobId) throw new Error('当前没有可强制停止的任务。');
+      const targetThread = threadsState.find((item) => String(item?.id || '').trim() === targetThreadId);
+      const targetTitle = String(targetThread?.title || targetThreadId || targetJobId).trim() || targetJobId;
+      if (!window.confirm(`确认强制停止会话「${targetTitle}」的当前任务？\n这会直接终止后台 Codex 进程。`)) {
+        setStatus('已取消强制停止。');
+        return;
+      }
+      stoppingThreadIds.add(targetThreadId);
+      renderThreads();
+      try {
+        const data = await request('/api/codex/job/cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ thread_id: targetThreadId, job_id: targetJobId, force: true }),
+        });
+        const preferredThreadId = currentThreadId || targetThreadId;
+        await loadThreads(preferredThreadId);
+        setStatus('已强制停止当前任务。', 'ok');
+        return data;
+      } finally {
+        stoppingThreadIds.delete(targetThreadId);
+        renderThreads();
+        syncInterruptButton();
+      }
+    }
+    async function deleteThread(threadId = currentThreadId) {
+      const targetThreadId = String(threadId || '').trim();
+      if (!targetThreadId) throw new Error('当前没有可删除的会话。');
+      const targetThread = threadsState.find((item) => String(item?.id || '').trim() === targetThreadId);
+      const targetTitle = String(targetThread?.title || currentThreadState?.title || targetThreadId).trim() || targetThreadId;
+      if (!window.confirm(`确认删除会话「${targetTitle}」？\n删除后不可恢复。`)) {
+        setStatus('已取消删除。');
+        return;
+      }
+      await request('/api/codex/thread/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ thread_id: targetThreadId }),
+      });
+      if (currentThreadId === targetThreadId) {
+        currentThreadId = '';
+        currentThreadState = null;
+      }
+      await loadThreads(currentThreadId);
+      setStatus('会话已删除。', 'ok');
+    }
+    async function logout() {
+      await request('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      }, false);
+      stopJobPolling();
+      window.location.replace(loginUrl());
+    }
+    function openPreview(items, index = 0) {
+      previewItems = Array.isArray(items) ? items : [];
+      previewIndex = Math.max(0, Math.min(index, previewItems.length - 1));
+      previewScale = 1;
+      renderPreview();
+      previewBackdrop.classList.remove('hidden');
+    }
+    function closePreview() { previewBackdrop.classList.add('hidden'); }
+    function clampPreviewScale(value) { return Math.max(0.2, Math.min(4, Number(value || 1))); }
+    function renderPreview() {
+      const item = previewItems[previewIndex] || {};
+      previewTitle.textContent = item.name || '图片预览';
+      const itemPath = String(item.path || '').trim();
+      if (!itemPath) {
+        previewImg.src = item.url || '';
+      } else {
+        previewImg.dataset.previewPath = itemPath;
+        const cachedUrl = attachmentObjectUrlCache.get(itemPath);
+        if (cachedUrl) {
+          previewImg.src = cachedUrl;
+        } else {
+          previewImg.removeAttribute('src');
+          resolveAttachmentObjectUrl(itemPath)
+            .then((objectUrl) => {
+              if (previewImg.dataset.previewPath !== itemPath) return;
+              previewImg.src = objectUrl;
+            })
+            .catch(() => {
+              if (previewImg.dataset.previewPath !== itemPath) return;
+              previewImg.removeAttribute('src');
+            });
+        }
+      }
+      previewImg.style.transform = `scale(${previewScale})`;
+      previewMeta.textContent = `${previewIndex + 1}/${previewItems.length || 0} · ${item.name || '-'}`;
+      previewPrevBtn.disabled = previewIndex <= 0;
+      previewNextBtn.disabled = previewIndex >= previewItems.length - 1;
+    }
+    function stepPreview(offset) {
+      previewIndex = Math.max(0, Math.min(previewIndex + offset, previewItems.length - 1));
+      renderPreview();
+    }
+    function zoomPreview(nextScale) { previewScale = clampPreviewScale(nextScale); renderPreview(); }
+
+    newThreadBtn.addEventListener('click', startNewThreadDraft);
+    mobileNewThreadBtn.addEventListener('click', startNewThreadDraft);
+    mobileSidebarBtn.addEventListener('click', openSidebarDrawer);
+    mobileCloseSidebarBtn.addEventListener('click', closeSidebarDrawer);
+    mobileBackdrop.addEventListener('click', closeSidebarDrawer);
+    logoutBtn.addEventListener('click', async () => {
+      try { await logout(); } catch (error) { setStatus(String(error), 'error'); }
+    });
+    sendBtn.addEventListener('click', async () => {
+      try { await sendMessage(); } catch (error) { setStatus(String(error), 'error'); }
+    });
+    interruptBtn.addEventListener('click', async () => {
+      try { await interruptCurrentJob(); } catch (error) { setStatus(String(error), 'error'); }
+    });
+    clearAttachmentsBtn.addEventListener('click', () => clearPendingFiles());
+    fileInput.addEventListener('change', async (event) => {
+      try { await loadPendingFiles(event.target.files, true); setStatus('附件已加入。'); } catch (error) { setStatus(String(error), 'error'); }
+    });
+    promptInput.addEventListener('keydown', async (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        try { await sendMessage(); } catch (error) { setStatus(String(error), 'error'); }
+      }
+    });
+    promptInput.addEventListener('input', resizePromptInput);
+    promptInput.addEventListener('paste', async (event) => {
+      const files = Array.from(event.clipboardData?.files || []);
+      if (!files.length) return;
+      event.preventDefault();
+      try { await loadPendingFiles(files, true); setStatus('已从剪贴板加入附件。'); } catch (error) { setStatus(String(error), 'error'); }
+    });
+    messages.addEventListener('scroll', () => {
+      if (messages.scrollTop <= 48) loadOlderMessages();
+    });
+    previewCloseBtn.addEventListener('click', closePreview);
+    previewBackdrop.addEventListener('click', (event) => { if (event.target === previewBackdrop) closePreview(); });
+    previewPrevBtn.addEventListener('click', () => stepPreview(-1));
+    previewNextBtn.addEventListener('click', () => stepPreview(1));
+    previewZoomOutBtn.addEventListener('click', () => zoomPreview(previewScale - 0.2));
+    previewZoomResetBtn.addEventListener('click', () => zoomPreview(1));
+    previewZoomInBtn.addEventListener('click', () => zoomPreview(previewScale + 0.2));
+    window.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      if (!previewBackdrop.classList.contains('hidden')) closePreview();
+      closeSidebarDrawer();
+    });
+    const handleLayoutChange = () => {
+      if (LAYOUT_OVERRIDE === 'mobile' || LAYOUT_OVERRIDE === 'desktop') return;
+      applyLayoutMode();
+    };
+    if (typeof LAYOUT_MEDIA.addEventListener === 'function') {
+      LAYOUT_MEDIA.addEventListener('change', handleLayoutChange);
+    } else if (typeof LAYOUT_MEDIA.addListener === 'function') {
+      LAYOUT_MEDIA.addListener(handleLayoutChange);
+    }
+
+    (async () => {
+      try {
+        applyLayoutMode();
+        await loadAuthState();
+        await loadThreads();
+        renderPendingFiles();
+        resizePromptInput();
+        syncInterruptButton();
+        if (!isMobileLayout()) {
+          promptInput.focus();
+        }
+      } catch (error) {
+        if (String(error) !== '未登录') setStatus(String(error), 'error');
+      }
+    })();
+  </script>
+</body>
+</html>

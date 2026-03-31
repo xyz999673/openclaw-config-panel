@@ -1,0 +1,26 @@
+__pycache__/
+*.py[cod]
+*.pid
+*.log
+.DS_Store
+
+# Local runtime state
+config-panel-auth.json
+config-panel-codex-auth.json
+config-panel-codex-store.json
+config-panel-presets.json
+config-panel-sessions.json
+config-panel-store.json
+panel-codex-jobs/
+panel-codex-uploads/
+
+# Local editor / virtualenv
+.venv/
+.idea/
+.vscode/
+*.pyc
+.env
+.env.*
+*.db
+*.sqlite
+*.sqlite3
