@@ -1,15 +1,40 @@
 # Contributing
 
-欢迎基于这个项目继续改造，但在提交 PR 前，建议先确认：
+Thanks for your interest in improving this project.
 
-- 不要提交运行时状态文件
-- 不要提交真实 key / token / 密码 / 私有域名
-- 尽量把“部署相关改动”和“功能改动”分开提交
-- 如果改到了配置写回逻辑，最好附上最小验证步骤
+Before opening a PR, please try to keep the repository friendly for public self-hosted use.
 
-目前仓库偏向自托管实用主义风格，优先考虑：
+## Ground rules
 
-- 可部署
-- 可读
-- 可维护
-- 不把本机私货带进源码仓
+- Do not commit runtime state files
+- Do not commit real keys, tokens, passwords, private domains, or private IPs
+- Prefer separating deployment changes from feature changes
+- If you modify config-apply logic, include a minimal validation or reproduction note
+
+## Project style
+
+This repository currently favors a practical self-hosted style:
+
+- deployable
+- readable
+- maintainable
+- minimal leakage of machine-specific private details
+
+## Suggested PR scope
+
+Good PRs for this repository usually fall into one of these buckets:
+
+- deployment polish
+- documentation clarity
+- provider discovery improvements
+- runtime/config safety improvements
+- UI usability improvements
+
+## Before submitting
+
+Please double-check:
+
+- no runtime data is included
+- no machine-local artifacts are included
+- no screenshots or docs leak private deployment details
+- Python files still pass basic compile checks
